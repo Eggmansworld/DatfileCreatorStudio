@@ -13,6 +13,12 @@ string? settingsPath = null;
 string? previewDir = null;
 string? analyzeDir = null;
 string analyzeType = "zipped";
+string? countDir = null;
+string? validatePath = null;
+string? bhuTarget = null;
+string bhuDate = "";
+bool bhuFp = false;
+var bhuSet = new Dictionary<string, string?>();
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--settings" && i + 1 < args.Length)
@@ -23,6 +29,74 @@ for (int i = 0; i < args.Length; i++)
         analyzeDir = args[++i];
     else if (args[i] == "--dat-type" && i + 1 < args.Length)
         analyzeType = args[++i];
+    else if (args[i] == "--count" && i + 1 < args.Length)
+        countDir = args[++i];
+    else if (args[i] == "--validate" && i + 1 < args.Length)
+        validatePath = args[++i];
+    else if (args[i] == "--bhu" && i + 1 < args.Length)
+        bhuTarget = args[++i];
+    else if (args[i] == "--bhu-date" && i + 1 < args.Length)
+        bhuDate = args[++i];
+    else if (args[i] == "--bhu-set" && i + 1 < args.Length)
+    {
+        string[] kv = args[++i].Split('=', 2);
+        bhuSet[kv[0]] = kv.Length > 1 ? kv[1] : "";
+    }
+    else if (args[i] == "--bhu-clear" && i + 1 < args.Length)
+        bhuSet[args[++i]] = "";
+    else if (args[i] == "--bhu-fp")
+        bhuFp = true;
+}
+
+// ── Counter mode ─────────────────────────────────────────────────────────
+if (countDir is not null)
+{
+    foreach (string fp in DatValidator.CollectFiles(countDir, singleMode: false))
+    {
+        string rel = Path.GetRelativePath(countDir, fp).Replace('\\', '/');
+        var c = DatCounter.ScanDatCounts(fp);
+        Console.WriteLine($"count|{rel}|{c.DatName}|{c.Games}|{c.Roms}|{c.TotalBytes}|{c.DirCount}|{c.Error}");
+    }
+    return 0;
+}
+
+// ── Validator mode ───────────────────────────────────────────────────────
+if (validatePath is not null)
+{
+    var files = DatValidator.CollectFiles(validatePath, singleMode: File.Exists(validatePath));
+    int totalIssues = 0, totalRoms = 0;
+    foreach (string fp in files)
+    {
+        Console.WriteLine("file|" + Path.GetFileName(fp));
+        var (issues, roms) = DatValidator.ValidateFile(fp, Console.WriteLine, () => false);
+        Console.WriteLine($"result|{issues}|{roms}");
+        totalIssues += issues;
+        totalRoms += roms;
+    }
+    Console.WriteLine($"total|{files.Count}|{totalRoms}|{totalIssues}");
+    return 0;
+}
+
+// ── Bulk Header Updater mode ─────────────────────────────────────────────
+if (bhuTarget is not null)
+{
+    var fieldValues = new Dictionary<string, string?>();
+    foreach (string f in BulkHeaderUpdater.OptionalFields)
+        fieldValues[f] = bhuSet.GetValueOrDefault(f);
+    foreach (string fp in BulkHeaderUpdater.IterDatFiles(bhuTarget))
+    {
+        var d = BulkHeaderUpdater.UpdateFile(fp, bhuDate, fieldValues, bhuFp);
+        string relAfter = Path.GetRelativePath(bhuTarget, d.PathAfter).Replace('\\', '/');
+        Console.WriteLine($"bhu|{relAfter}"
+            + $"|fn={d.FnDateBefore ?? "None"}>{d.FnDateAfter ?? "None"}"
+            + $"|hdr={d.HdrDateBefore ?? "None"}>{d.HdrDateAfter ?? "None"}"
+            + $"|added={string.Join(",", d.FieldsAdded)}"
+            + $"|updated={string.Join(",", d.FieldsUpdated)}"
+            + $"|cleared={string.Join(",", d.FieldsCleared)}"
+            + $"|renamed={(d.Renamed ? 1 : 0)}|content={(d.ContentUpdated ? 1 : 0)}"
+            + $"|warn={string.Join(";", d.Warnings)}");
+    }
+    return 0;
 }
 
 // ── Analyzer mode: print structured findings for parity comparison ──────

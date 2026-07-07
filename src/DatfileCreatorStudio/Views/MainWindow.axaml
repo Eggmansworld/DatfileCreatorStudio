@@ -21,6 +21,13 @@
                 <MenuItem Header="Long Path Length Repair..." Click="OnOpenPathRepair"
                           ToolTip.Tip="Find and interactively fix files whose full path length approaches or exceeds the Windows 260-character MAX_PATH limit"/>
                 <Separator/>
+                <MenuItem Header="Bulk Datfile Header Updater..." Click="OnOpenHeaderUpdater"
+                          ToolTip.Tip="Find and replace header fields (author, version, URL, etc.) across an entire folder of datfiles at once"/>
+                <MenuItem Header="Game and ROM Counter..." Click="OnOpenCounter"
+                          ToolTip.Tip="Tally total games, ROMs, and collection size across any set of datfiles"/>
+                <MenuItem Header="Validate Datfiles..." Click="OnOpenValidator"
+                          ToolTip.Tip="Validate every rom entry and check required attributes are present and correctly formatted"/>
+                <Separator/>
                 <MenuItem Header="(More tools arrive in upcoming sessions)" IsEnabled="False"/>
             </MenuItem>
         </Menu>

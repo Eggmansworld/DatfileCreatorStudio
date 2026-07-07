@@ -134,6 +134,15 @@ public partial class MainWindow : Window
         window.Show(this);
     }
 
+    private void OnOpenHeaderUpdater(object? sender, RoutedEventArgs e) =>
+        new BulkHeaderUpdaterWindow { DataContext = new BulkHeaderUpdaterViewModel() }.Show(this);
+
+    private void OnOpenCounter(object? sender, RoutedEventArgs e) =>
+        new GameRomCounterWindow { DataContext = new GameRomCounterViewModel() }.Show(this);
+
+    private void OnOpenValidator(object? sender, RoutedEventArgs e) =>
+        new ValidateDatfilesWindow { DataContext = new ValidateDatfilesViewModel() }.Show(this);
+
     private void OnPreviewClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } vm || vm.PreviewEntries.Count == 0)

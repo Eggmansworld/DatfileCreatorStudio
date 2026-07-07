@@ -1,0 +1,149 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.GameRomCounterWindow"
+        x:DataType="vm:GameRomCounterViewModel"
+        Title="Game &amp; ROM Counter"
+        Width="1060" Height="820"
+        MinWidth="820" MinHeight="640"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel Margin="12">
+
+        <!-- Source -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,8">
+            <Grid ColumnDefinitions="180,*,Auto,Auto,Auto">
+                <TextBlock Grid.Column="0" Classes="fieldLabel" Text="Folder containing dat files"/>
+                <TextBox Grid.Column="1" Name="PathBox" Text="{Binding FolderPath}" FontSize="12"
+                         Watermark="Scanned recursively for .xml and .dat files — drag &amp; drop works"/>
+                <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowse"
+                        ToolTip.Tip="Browse for the dat folder">
+                    <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                </Button>
+                <Button Grid.Column="3" Classes="accent" Margin="10,0,0,0" Padding="16,7"
+                        FontWeight="SemiBold" Click="OnScan" IsEnabled="{Binding !IsScanning}"
+                        Content="Scan"/>
+                <Button Grid.Column="4" Margin="6,0,0,0" Padding="12,7" Click="OnStop"
+                        IsEnabled="{Binding IsScanning}" Content="Stop"/>
+            </Grid>
+        </Border>
+
+        <!-- View toggle + column headers -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,*" Margin="0,0,0,4">
+            <TextBlock Grid.Column="0" Classes="fieldLabel" Text="View:"/>
+            <RadioButton Grid.Column="1" Classes="opt" GroupName="grcView" Content="🌳 Tree"
+                         IsChecked="{Binding ViewTree}" Margin="6,0,0,0"/>
+            <RadioButton Grid.Column="2" Classes="opt" GroupName="grcView" Content="📋 Flat List"
+                         IsChecked="{Binding ViewFlat}" Margin="10,0,0,0"/>
+            <TextBlock Grid.Column="3" Text="{Binding StatusText}" Classes="subtle" FontSize="12"
+                       VerticalAlignment="Center" HorizontalAlignment="Right"/>
+        </Grid>
+
+        <!-- Selection subtotal + summary -->
+        <Border DockPanel.Dock="Bottom" Classes="card" Padding="12,8" Margin="0,8,0,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding SelectionInfo}" FontWeight="SemiBold" FontSize="12"
+                           TextWrapping="Wrap"/>
+                <Separator/>
+                <Grid ColumnDefinitions="Auto,*,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                    <Grid.Styles>
+                        <Style Selector="TextBlock.k">
+                            <Setter Property="Foreground" Value="{DynamicResource AppSubtleTextBrush}"/>
+                            <Setter Property="FontSize" Value="11"/>
+                            <Setter Property="Margin" Value="0,0,8,1"/>
+                        </Style>
+                        <Style Selector="TextBlock.v">
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="FontSize" Value="11"/>
+                        </Style>
+                    </Grid.Styles>
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="k" Text="Total dat files:"/>
+                    <TextBlock Grid.Row="0" Grid.Column="1" Classes="v" Text="{Binding TotalDats}"/>
+                    <TextBlock Grid.Row="0" Grid.Column="2" Classes="k" Text="Root folders:"/>
+                    <TextBlock Grid.Row="0" Grid.Column="3" Classes="v" Text="{Binding RootFolders}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" Classes="k" Text="Total games:"/>
+                    <TextBlock Grid.Row="1" Grid.Column="1" Classes="v" Text="{Binding TotalGames}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Classes="k" Text="Total ROMs:"/>
+                    <TextBlock Grid.Row="1" Grid.Column="3" Classes="v" Text="{Binding TotalRoms}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="k" Text="Total uncompressed size:"/>
+                    <TextBlock Grid.Row="2" Grid.Column="1" Classes="v" Text="{Binding TotalSize}"/>
+                    <TextBlock Grid.Row="2" Grid.Column="2" Classes="k" Text="Internal &lt;dir&gt; folders:"/>
+                    <TextBlock Grid.Row="2" Grid.Column="3" Classes="v" Text="{Binding SubFolders}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="0" Classes="k" Text="Avg games / dat:"/>
+                    <TextBlock Grid.Row="3" Grid.Column="1" Classes="v" Text="{Binding AvgGames}"/>
+                    <TextBlock Grid.Row="3" Grid.Column="2" Classes="k" Text="Avg ROMs / dat:"/>
+                    <TextBlock Grid.Row="3" Grid.Column="3" Classes="v" Text="{Binding AvgRoms}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="k" Text="Largest (games):"/>
+                    <TextBlock Grid.Row="4" Grid.Column="1" Classes="v" Text="{Binding MaxGames}"/>
+                    <TextBlock Grid.Row="4" Grid.Column="2" Classes="k" Text="Largest (ROMs):"/>
+                    <TextBlock Grid.Row="4" Grid.Column="3" Classes="v" Text="{Binding MaxRoms}"/>
+                    <TextBlock Grid.Row="5" Grid.Column="0" Classes="k" Text="Empty dats (0 games):"/>
+                    <TextBlock Grid.Row="5" Grid.Column="1" Classes="v" Text="{Binding EmptyDats}"/>
+                    <TextBlock Grid.Row="5" Grid.Column="2" Classes="k" Text="Parse errors:"/>
+                    <TextBlock Grid.Row="5" Grid.Column="3" Classes="v" Text="{Binding ParseErrors}"/>
+                </Grid>
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                    <Button Grid.Column="0" Padding="12,7" Click="OnCopySummary" Content="📋 Copy Summary"/>
+                    <Button Grid.Column="1" Margin="8,0,0,0" Padding="12,7" Click="OnSaveLog" Content="Save Log"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Padding="12,7" Click="OnExportCsv" Content="Export CSV"/>
+                    <Button Grid.Column="4" Padding="12,7" Click="OnClose" Content="Close"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Dat list -->
+        <Border Background="{DynamicResource AppLogBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,90,90,140,14" Margin="8,4,8,2">
+                    <Button Grid.Column="0" Classes="icon" Click="OnSortName" Content="Dat Name / Folder ↕"
+                            FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"/>
+                    <Button Grid.Column="1" Classes="icon" Click="OnSortGames" Content="Games ↕"
+                            FontSize="11" FontWeight="SemiBold"/>
+                    <Button Grid.Column="2" Classes="icon" Click="OnSortRoms" Content="ROMs ↕"
+                            FontSize="11" FontWeight="SemiBold"/>
+                    <Button Grid.Column="3" Classes="icon" Click="OnSortSize" Content="Size ↕"
+                            FontSize="11" FontWeight="SemiBold"/>
+                </Grid>
+                <ListBox Name="DatList" ItemsSource="{Binding Rows}" SelectionMode="Multiple"
+                         Background="Transparent" SelectionChanged="OnSelectionChanged">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="8,1"/>
+                            <Setter Property="MinHeight" Value="22"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CounterRow">
+                            <Grid ColumnDefinitions="*,90,90,140" Margin="{Binding Indent}">
+                                <TextBlock Grid.Column="0" Text="{Binding DisplayName}" FontSize="11"
+                                           Foreground="{Binding RowBrush}" FontWeight="{Binding NameWeight}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="1" Text="{Binding GamesText}" FontSize="11"
+                                           HorizontalAlignment="Right"/>
+                                <TextBlock Grid.Column="2" Text="{Binding RomsText}" FontSize="11"
+                                           HorizontalAlignment="Right" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="3" Text="{Binding SizeText}" FontSize="11"
+                                           HorizontalAlignment="Right"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Select All Dats" Click="OnSelectAll"/>
+                            <MenuItem Header="Deselect All" Click="OnDeselectAll"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </DockPanel>
+</Window>

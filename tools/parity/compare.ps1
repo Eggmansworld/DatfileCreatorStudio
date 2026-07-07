@@ -263,6 +263,117 @@ foreach ($run in $incrRuns) {
     Write-Host ("{0,-28} {1}  {2}" -f $name, $status, $detail) -ForegroundColor $colour
 }
 
+# ══ Dat tools parity (Counter / Validator / Bulk Header Updater) ══════════
+Write-Host ""
+Write-Host "Dat tools parity:" -ForegroundColor Cyan
+
+# Test data: generated dats + a deliberately broken dat + a minimal-header dat
+$toolsData = Join-Path $parityOut "tools-data"
+if (Test-Path $toolsData) { Remove-Item -Recurse -Force $toolsData }
+New-Item -ItemType Directory -Force $toolsData | Out-Null
+Copy-Item -Recurse (Join-Path $runsDir "zipped_perroot_opt2\py\TestCollection") (Join-Path $toolsData "dats")
+
+$brokenDat = @'
+<?xml version="1.0"?>
+<datafile>
+	<header>
+		<name>Broken Test</name>
+		<description>validator test</description>
+		<version>1</version>
+		<date>2026-01-01</date>
+	</header>
+	<game name="Bad Game">
+		<description>Bad Game</description>
+		<rom name="ok.bin" size="10" crc="0011aabb" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
+		<rom name="bad1.bin" size="abc" crc="zz11aabb" sha1="short"/>
+		<rom name="bad2.bin" crc="0011aabb" md5="nothex" sha256="aa"/>
+		<rom name="bad3.bin" size="" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709" blake3="00"/>
+	</game>
+</datafile>
+'@
+Set-Content -Path (Join-Path $toolsData "broken.dat") -Value $brokenDat -Encoding UTF8 -NoNewline
+
+$minimalDat = @'
+<?xml version="1.0"?>
+<datafile>
+	<header>
+		<name>Minimal Header (2026-01-01_RomVault)</name>
+		<date>2026-01-01</date>
+	</header>
+	<game name="Only Game">
+		<rom name="a.bin" size="4" crc="00112233" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
+	</game>
+</datafile>
+'@
+Set-Content -Path (Join-Path $toolsData "Minimal Header (2026-01-01_RomVault).xml") -Value $minimalDat -Encoding UTF8 -NoNewline
+
+# ── Counter + Validator (read-only, shared data) ─────────────────────────
+foreach ($mode in @("count", "validate")) {
+    $name = "tools_$mode"
+    if ($mode -eq "count") {
+        $pyLines = @(python (Join-Path $PSScriptRoot "run_tools.py") count $toolsData 2>&1)
+        $csLines = @(& $runnerExe --count $toolsData 2>&1)
+    } else {
+        $pyLines = @(python (Join-Path $PSScriptRoot "run_tools.py") validate $toolsData 2>&1)
+        $csLines = @(& $runnerExe --validate $toolsData 2>&1)
+    }
+    $diff = @(Compare-Object $pyLines $csLines)
+    if ($diff.Count -eq 0) {
+        $status = "PASS"; $detail = "$($pyLines.Count) line(s) identical"
+    } else {
+        $status = "FAIL"
+        $detail = ($diff | Select-Object -First 2 | ForEach-Object {
+            "$($_.SideIndicator) $($_.InputObject)" }) -join "; "
+    }
+    $results += [pscustomobject]@{ Run = $name; Status = $status; Detail = $detail }
+    $colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+    Write-Host ("{0,-28} {1}  {2}" -f $name, $status, $detail) -ForegroundColor $colour
+}
+
+# ── Bulk Header Updater (mutates — per-side copies) ──────────────────────
+$bhuName = "tools_bhu"
+$bhuPy = Join-Path $parityOut "tools-bhu\py"
+$bhuCs = Join-Path $parityOut "tools-bhu\cs"
+if (Test-Path (Join-Path $parityOut "tools-bhu")) {
+    Remove-Item -Recurse -Force (Join-Path $parityOut "tools-bhu")
+}
+Copy-Item -Recurse $toolsData $bhuPy
+Copy-Item -Recurse $toolsData $bhuCs
+
+$pyLines = @(python (Join-Path $PSScriptRoot "run_tools.py") bhu $bhuPy "2026-08-01" `
+    "author=Parity Bot" "version=v2-parity" --clear comment --fp 2>&1) | Sort-Object
+$csLines = @(& $runnerExe --bhu $bhuCs --bhu-date "2026-08-01" `
+    --bhu-set "author=Parity Bot" --bhu-set "version=v2-parity" `
+    --bhu-clear comment --bhu-fp 2>&1) | Sort-Object
+
+$status = "PASS"; $detail = ""
+$diff = @(Compare-Object $pyLines $csLines)
+if ($diff.Count -gt 0) {
+    $status = "FAIL"
+    $detail = "detail lines differ: " + (($diff | Select-Object -First 2 | ForEach-Object {
+        "$($_.SideIndicator) $($_.InputObject)" }) -join "; ")
+} else {
+    $pyFiles = @(Get-ChildItem -Recurse -File $bhuPy | ForEach-Object {
+        $_.FullName.Substring($bhuPy.Length + 1) })
+    $csFiles = @(Get-ChildItem -Recurse -File $bhuCs | ForEach-Object {
+        $_.FullName.Substring($bhuCs.Length + 1) })
+    if (@(Compare-Object $pyFiles $csFiles).Count -gt 0) {
+        $status = "FAIL"; $detail = "renamed file lists differ"
+    } else {
+        foreach ($rel in $pyFiles) {
+            $a = Get-FileHash -Algorithm SHA256 (Join-Path $bhuPy $rel)
+            $b = Get-FileHash -Algorithm SHA256 (Join-Path $bhuCs $rel)
+            if ($a.Hash -ne $b.Hash) { $status = "FAIL"; $detail = "byte mismatch: $rel"; break }
+        }
+        if ($status -eq "PASS") {
+            $detail = "$($pyFiles.Count) updated dat(s) byte-identical, $($pyLines.Count) detail line(s) equal"
+        }
+    }
+}
+$results += [pscustomobject]@{ Run = $bhuName; Status = $status; Detail = $detail }
+$colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+Write-Host ("{0,-28} {1}  {2}" -f $bhuName, $status, $detail) -ForegroundColor $colour
+
 # ══ Folder Structure Analyzer parity ══════════════════════════════════════
 Write-Host ""
 Write-Host "Analyzer parity:" -ForegroundColor Cyan

@@ -1,0 +1,103 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.BulkHeaderUpdaterWindow"
+        x:DataType="vm:BulkHeaderUpdaterViewModel"
+        Title="Bulk Datfile Header Updater"
+        Width="880" Height="780"
+        MinWidth="740" MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel Margin="12">
+
+        <!-- Header fields -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10"
+                ToolTip.Tip="Leave a field blank to leave existing dat content untouched. Enter a value to overwrite that field in every dat. Tick Clear to erase the field (writes empty tags). Only .xml and .dat files are processed; subfolders are searched recursively.">
+            <StackPanel Spacing="6">
+                <TextBlock Classes="sectionHeader" Text="Header Fields"/>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="fieldLabel" Text="New date (YYYY-MM-DD)" Width="150"/>
+                    <TextBox Text="{Binding NewDate}" Width="130" FontSize="12"/>
+                    <TextBlock Classes="subtle" FontSize="11" VerticalAlignment="Center"
+                               Text="required — always updates the &lt;date&gt; tag and the (YYYY-MM-DD_RomVault) filename token"/>
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Fields}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BhuFieldRow">
+                            <Grid ColumnDefinitions="150,*,Auto" Margin="0,2,0,0">
+                                <TextBlock Grid.Column="0" Classes="fieldLabel" Text="{Binding Label}"/>
+                                <TextBox Grid.Column="1" Text="{Binding Value}" FontSize="12"
+                                         IsEnabled="{Binding IsValueEnabled}"/>
+                                <CheckBox Grid.Column="2" Classes="opt" Content="Clear" Margin="10,0,0,0"
+                                          IsChecked="{Binding Clear}"
+                                          ToolTip.Tip="Erase this field's content in every dat (writes an empty tag)"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <CheckBox Classes="opt" Margin="0,4,0,0"
+                          Content="Add &lt;romvault forcepacking=&quot;fileonly&quot;/&gt; (skipped if already present)"
+                          IsChecked="{Binding AddForcePacking}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Source -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10">
+            <Grid ColumnDefinitions="150,*,Auto,Auto">
+                <TextBlock Grid.Column="0" Classes="fieldLabel" Text="Dat files or folder"/>
+                <TextBox Grid.Column="1" Name="SourceBox" Text="{Binding SourcePath}" FontSize="12"
+                         Watermark="A single dat, or a folder searched recursively — drag &amp; drop works"/>
+                <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowseFile"
+                        ToolTip.Tip="Browse for a single dat file">
+                    <PathIcon Data="{x:Static root:Icons.FileDocument}" Width="14" Height="14"/>
+                </Button>
+                <Button Grid.Column="3" Margin="4,0,0,0" Click="OnBrowseFolder"
+                        ToolTip.Tip="Browse for a folder of dats">
+                    <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- Buttons -->
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="0,10,0,0">
+            <Button Grid.Column="0" Classes="accent" Padding="18,8" FontWeight="SemiBold"
+                    Click="OnRun" IsEnabled="{Binding !IsRunning}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{x:Static root:Icons.Play}" Width="13" Height="13"/>
+                    <TextBlock Text="Run"/>
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="1" Margin="8,0,0,0" Padding="14,8" Click="OnStop"
+                    IsEnabled="{Binding IsRunning}" Content="Stop"/>
+            <Button Grid.Column="2" Margin="16,0,0,0" Padding="14,8" Click="OnClearLog" Content="Clear Log"/>
+            <Button Grid.Column="3" Margin="8,0,0,0" Padding="14,8" Click="OnSaveLog" Content="Save Log"/>
+            <Button Grid.Column="5" Padding="14,8" Click="OnClose" Content="Close"/>
+        </Grid>
+
+        <!-- Activity log -->
+        <Border Background="{DynamicResource AppLogBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6">
+            <ListBox Name="LogList" ItemsSource="{Binding Lines}" Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="12,0"/>
+                        <Setter Property="MinHeight" Value="18"/>
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LogLine">
+                        <TextBlock Classes="logLine" Text="{Binding Text}" Foreground="{Binding Brush}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</Window>
