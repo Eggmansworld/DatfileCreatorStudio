@@ -1,0 +1,168 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.LongPathRepairWindow"
+        x:DataType="vm:LongPathRepairViewModel"
+        Title="Long Path Length Repair"
+        Width="1240" Height="800"
+        MinWidth="980" MinHeight="640"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel Margin="12">
+
+        <!-- Top control bar -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" Margin="0,0,0,8">
+            <Button Grid.Column="0" Padding="12,7" Click="OnScanFolder" Content="Scan Folder..."
+                    ToolTip.Tip="Scan any folder for long paths (200+ characters)"/>
+            <Button Grid.Column="1" Margin="8,0,0,0" Padding="12,7" Click="OnImportLog"
+                    Content="Import from Log"
+                    ToolTip.Tip="Reload a previously saved analysis log to resume work across sessions"/>
+            <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Target length:" Margin="18,0,4,0"/>
+            <TextBox Grid.Column="3" Text="{Binding TargetText}" Width="60" FontSize="12"
+                     ToolTip.Tip="Auto-Suggest shortens filenames to bring the total path length to this many characters (100–259)"/>
+            <TextBlock Grid.Column="4" Classes="subtle" FontSize="11" Text="chars (used by Auto-Suggest)"
+                       VerticalAlignment="Center" Margin="6,0,0,0"/>
+            <TextBlock Grid.Column="6" Text="{Binding StatsText}" FontStyle="Italic" FontSize="12"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Filter bar -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="16" Margin="0,0,0,6">
+            <TextBlock Classes="fieldLabel" Text="Show:"/>
+            <RadioButton Classes="opt" GroupName="lprFilter" Content="All" IsChecked="{Binding FilterAll}"/>
+            <RadioButton Classes="opt" GroupName="lprFilter" Content="⚠ Warning (200–259)" IsChecked="{Binding FilterWarn}"/>
+            <RadioButton Classes="opt" GroupName="lprFilter" Content="🔴 Critical (260+)" IsChecked="{Binding FilterCrit}"/>
+            <RadioButton Classes="opt" GroupName="lprFilter" Content="● Pending" IsChecked="{Binding FilterPending}"/>
+        </StackPanel>
+
+        <!-- Bottom button bar -->
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="0,8,0,0">
+            <Button Grid.Column="0" Padding="14,8" Click="OnSaveRenameLog" Content="Save Rename Log"
+                    ToolTip.Tip="Export the full rename history of this session"/>
+            <Button Grid.Column="1" Margin="8,0,0,0" Padding="14,8" Click="OnUndoLast"
+                    IsEnabled="{Binding CanUndo}" Content="↩ Undo Last"
+                    ToolTip.Tip="Reverse the most recent file or folder rename"/>
+            <Button Grid.Column="2" Margin="8,0,0,0" Padding="14,8" Click="OnApplySelected"
+                    Classes="accent" Content="✔ Apply Selected"
+                    ToolTip.Tip="Rename all selected rows that are marked Pending"/>
+            <Button Grid.Column="3" Margin="8,0,0,0" Padding="14,8" Click="OnApplyAll"
+                    Classes="accent" Content="✔ Apply All"
+                    ToolTip.Tip="Rename every row marked Pending"/>
+            <Button Grid.Column="5" Padding="14,8" Click="OnClose" Content="Close"/>
+        </Grid>
+
+        <!-- Status message -->
+        <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusMessage}" Classes="subtle"
+                   FontSize="12" Margin="0,8,0,0" TextWrapping="Wrap"/>
+
+        <!-- Edit panel -->
+        <Border DockPanel.Dock="Bottom" Classes="card" Padding="12,10" Margin="0,8,0,0">
+            <Grid ColumnDefinitions="50,*,Auto" RowDefinitions="Auto,8,Auto,8,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldLabel" Text="Path:" FontWeight="SemiBold"/>
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="{Binding EditDirText}" FontFamily="Cascadia Mono,Consolas,monospace"
+                               FontSize="12" Foreground="#4A9EDA"/>
+                    <TextBlock Text="{Binding EditStem}" FontFamily="Cascadia Mono,Consolas,monospace"
+                               FontSize="12" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding EditExtText}" FontFamily="Cascadia Mono,Consolas,monospace"
+                               FontSize="12" Foreground="{DynamicResource AppSubtleTextBrush}" Margin="4,0,0,0"/>
+                </StackPanel>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding CurrentLenText}" FontSize="12"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldLabel" Text="Stem:"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Name="StemBox" Text="{Binding EditStem}"
+                         IsEnabled="{Binding HasSelection}" FontSize="12" KeyDown="OnStemKeyDown"
+                         ToolTip.Tip="Edit the filename stem (extension is locked). Press Enter to preview the rename."/>
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding NewLenText}"
+                           Foreground="{Binding NewLenBrush}" FontWeight="SemiBold" FontSize="12"
+                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+
+                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Padding="12,6" Click="OnAutoSuggest" IsEnabled="{Binding HasSelection}"
+                            Content="Auto-Suggest"
+                            ToolTip.Tip="Smart stem shortening: collapse spaces, drop trailing (bracketed) tokens, then truncate to reach the target length. Works on all selected rows."/>
+                    <Button Padding="12,6" Click="OnPreviewEdit" IsEnabled="{Binding HasSelection}"
+                            Content="Preview Edit"
+                            ToolTip.Tip="Mark this row as Pending with the edited stem (nothing renamed yet)"/>
+                    <Button Padding="12,6" Click="OnClearEdit" IsEnabled="{Binding HasSelection}"
+                            Content="↩ Clear Edit"
+                            ToolTip.Tip="Discard pending edits on the selected rows"/>
+                    <Button Padding="12,6" Click="OnRenameParent" IsEnabled="{Binding HasSelection}"
+                            Content="Rename Parent Folder..."
+                            ToolTip.Tip="Rename the deepest folder component of the selected path — updates every affected row"/>
+                    <Button Padding="12,6" Click="OnApplyThis" IsEnabled="{Binding CanApplyThis}"
+                            Classes="accent" Content="✔ Apply This File"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Flagged paths list -->
+        <Border Background="{DynamicResource AppLogBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6">
+            <DockPanel>
+                <!-- Header row with sort buttons -->
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="95,62,3*,2*,80,14" Margin="8,4,8,2">
+                    <Button Grid.Column="0" Classes="icon" Click="OnSortStatus" Content="Status"
+                            FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"/>
+                    <Button Grid.Column="1" Classes="icon" Click="OnSortLength" Content="Len"
+                            FontSize="11" FontWeight="SemiBold"/>
+                    <Button Grid.Column="2" Classes="icon" Click="OnSortDirectory" Content="📁 Directory"
+                            FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"/>
+                    <Button Grid.Column="3" Classes="icon" Click="OnSortFilename" Content="✏ Filename"
+                            FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"/>
+                    <Button Grid.Column="4" Classes="icon" Click="OnSortExt" Content="Ext"
+                            FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Left"/>
+                </Grid>
+                <ListBox Name="PathList" ItemsSource="{Binding Visible}" SelectionMode="Multiple"
+                         Background="Transparent" SelectionChanged="OnSelectionChanged">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel/>
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="8,1"/>
+                            <Setter Property="MinHeight" Value="22"/>
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RepairItem">
+                            <Grid ColumnDefinitions="95,62,3*,2*,80">
+                                <TextBlock Grid.Column="0" Text="{Binding StatusText}" FontSize="11"
+                                           Foreground="{Binding RowBrush}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="1" Text="{Binding LengthText}" FontSize="11"
+                                           Foreground="{Binding RowBrush}" HorizontalAlignment="Center"/>
+                                <TextBlock Grid.Column="2" Text="{Binding DirPart}" FontSize="11"
+                                           FontFamily="Cascadia Mono,Consolas,monospace"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="3" Text="{Binding DisplayStem}" FontSize="11"
+                                           FontFamily="Cascadia Mono,Consolas,monospace"
+                                           Foreground="{Binding RowBrush}" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Grid.Column="4" Text="{Binding Ext}" FontSize="11"
+                                           FontFamily="Cascadia Mono,Consolas,monospace"
+                                           Foreground="{DynamicResource AppSubtleTextBrush}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                    <ListBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Open Folder in Explorer" Click="OnOpenFolder"/>
+                            <Separator/>
+                            <MenuItem Header="Auto-Suggest Filename" Click="OnAutoSuggest"/>
+                            <MenuItem Header="Rename Parent Folder..." Click="OnRenameParent"/>
+                            <Separator/>
+                            <MenuItem Header="Apply This File" Click="OnApplyThis"/>
+                        </ContextMenu>
+                    </ListBox.ContextMenu>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </DockPanel>
+</Window>

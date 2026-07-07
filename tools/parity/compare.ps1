@@ -3,6 +3,11 @@
 # byte. Run from anywhere:  pwsh tools/parity/compare.ps1
 $ErrorActionPreference = "Stop"
 
+# Both engines emit UTF-8 text (em-dashes in analyzer findings etc.) — make
+# sure PowerShell captures it as such on both sides
+$env:PYTHONIOENCODING = "utf-8"
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+
 $repo = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $parityOut = Join-Path $repo "parity-out"
 $collection = Join-Path $parityOut "TestCollection"
@@ -253,6 +258,26 @@ foreach ($run in $incrRuns) {
         }
     }
 
+    $results += [pscustomobject]@{ Run = $name; Status = $status; Detail = $detail }
+    $colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+    Write-Host ("{0,-28} {1}  {2}" -f $name, $status, $detail) -ForegroundColor $colour
+}
+
+# ══ Folder Structure Analyzer parity ══════════════════════════════════════
+Write-Host ""
+Write-Host "Analyzer parity:" -ForegroundColor Cyan
+foreach ($atype in @("mixed", "zipped")) {
+    $name = "analyzer_$atype"
+    $pyLines = @(python (Join-Path $PSScriptRoot "run_analyzer.py") $collection $atype 2>&1)
+    $csLines = @(& $runnerExe --analyze $collection --dat-type $atype 2>&1)
+    $diff = @(Compare-Object $pyLines $csLines)
+    if ($diff.Count -eq 0) {
+        $status = "PASS"; $detail = "$($pyLines.Count) finding line(s) identical"
+    } else {
+        $status = "FAIL"
+        $detail = ($diff | Select-Object -First 2 | ForEach-Object {
+            "$($_.SideIndicator) $($_.InputObject)" }) -join "; "
+    }
     $results += [pscustomobject]@{ Run = $name; Status = $status; Detail = $detail }
     $colour = if ($status -eq "PASS") { "Green" } else { "Red" }
     Write-Host ("{0,-28} {1}  {2}" -f $name, $status, $detail) -ForegroundColor $colour

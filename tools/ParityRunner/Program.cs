@@ -11,12 +11,48 @@ using DatfileCreator.Core;
 
 string? settingsPath = null;
 string? previewDir = null;
+string? analyzeDir = null;
+string analyzeType = "zipped";
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--settings" && i + 1 < args.Length)
         settingsPath = args[++i];
     else if (args[i] == "--preview-dir" && i + 1 < args.Length)
         previewDir = args[++i];
+    else if (args[i] == "--analyze" && i + 1 < args.Length)
+        analyzeDir = args[++i];
+    else if (args[i] == "--dat-type" && i + 1 < args.Length)
+        analyzeType = args[++i];
+}
+
+// ── Analyzer mode: print structured findings for parity comparison ──────
+if (analyzeDir is not null)
+{
+    var f = FolderAnalysis.Analyze(analyzeDir, analyzeType);
+    var ps = FolderAnalysis.CollectPathLengths(analyzeDir);
+    Console.WriteLine("top_folders=" + f.TopFolders);
+    Console.WriteLine("total_items=" + f.TotalItems);
+    Console.WriteLine("max_depth=" + f.MaxDepth);
+    Console.WriteLine("flat_games=" + f.FoldersFlatGames);
+    Console.WriteLine("with_direct=" + f.FoldersWithDirectItems);
+    Console.WriteLine("containers=" + f.FoldersAsContainers);
+    Console.WriteLine("nested=" + f.FoldersWithNestedSubdirs);
+    Console.WriteLine("empty=" + f.FoldersEmpty);
+    Console.WriteLine("histogram=" + string.Join(",",
+        f.DepthHistogram.Select(kv => kv.Key + ":" + kv.Value)));
+    foreach (string note in f.Notes)
+        Console.WriteLine("note=" + note);
+    Console.WriteLine("rec_gen=" + f.Recommendation.GenMode);
+    Console.WriteLine("rec_structure=" + f.Recommendation.Structure);
+    Console.WriteLine("rec_confidence=" + f.Recommendation.Confidence);
+    Console.WriteLine("rec_summary=" + f.Recommendation.Summary);
+    foreach (string d in f.Recommendation.Detail)
+        Console.WriteLine("detail=" + d);
+    Console.WriteLine("path_total=" + ps.TotalPaths);
+    Console.WriteLine("path_max=" + ps.MaxPathLen);
+    Console.WriteLine("warn_count=" + ps.WarnCount);
+    Console.WriteLine("crit_count=" + ps.CritCount);
+    return 0;
 }
 
 if (settingsPath is null || !File.Exists(settingsPath))

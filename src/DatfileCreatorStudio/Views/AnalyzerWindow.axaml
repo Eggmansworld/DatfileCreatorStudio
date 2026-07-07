@@ -1,0 +1,94 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.AnalyzerWindow"
+        x:DataType="vm:AnalyzerViewModel"
+        Title="Folder Structure Analyzer"
+        Width="920" Height="700"
+        MinWidth="760" MinHeight="540"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel Margin="12">
+
+        <!-- Top: path + type + run -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,10">
+            <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="130,*,Auto">
+                    <TextBlock Grid.Column="0" Classes="fieldLabel" Text="Folder to analyze"
+                               ToolTip.Tip="The analyzer walks the folder structure (no hashing) and recommends Generation and Structure settings. Drag &amp; drop works here."/>
+                    <TextBox Grid.Column="1" Name="PathBox" Text="{Binding FolderPath}"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowse"
+                            ToolTip.Tip="Browse for the folder to analyze">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="20">
+                    <TextBlock Classes="fieldLabel" Text="Content type"/>
+                    <RadioButton Classes="opt" GroupName="aztype" Content="Mixed (Archive as File)"
+                                 IsChecked="{Binding TypeMixed}"/>
+                    <RadioButton Classes="opt" GroupName="aztype" Content="Zipped (zip contents)"
+                                 IsChecked="{Binding TypeZipped}"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Classes="accent" Padding="18,8" Click="OnAnalyze" FontWeight="SemiBold"
+                            IsEnabled="{Binding !IsScanning}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{x:Static root:Icons.Magnify}" Width="13" Height="13"/>
+                            <TextBlock Text="Analyze"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Padding="14,8" Click="OnStop" IsEnabled="{Binding IsScanning}" Content="Stop"/>
+                    <ProgressBar Width="160" Height="8" VerticalAlignment="Center"
+                                 IsIndeterminate="True" IsVisible="{Binding IsScanning}"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Recommendation + actions bar -->
+        <Border DockPanel.Dock="Bottom" Classes="card" Padding="12,8" Margin="0,10,0,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding RecommendationText}" FontStyle="Italic" FontSize="12"
+                           TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto">
+                    <Button Grid.Column="0" Classes="accent" Padding="14,8" Click="OnApply"
+                            IsEnabled="{Binding CanApply}" Content="Apply Recommended Settings"
+                            FontWeight="SemiBold"
+                            ToolTip.Tip="Fill the main window's Dat Type, Generation, Structure, Format, and Input folder from this analysis, then close the Analyzer"/>
+                    <Button Grid.Column="1" Margin="8,0,0,0" Padding="14,8" Click="OnSaveLog"
+                            IsEnabled="{Binding CanSaveLog}" Content="Save Analysis Log"
+                            ToolTip.Tip="Export the full analysis including every warning/critical path"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Padding="14,8" Click="OnOpenRepair"
+                            IsEnabled="{Binding CanOpenRepair}" Content="Open Path Repair Tool"
+                            ToolTip.Tip="Open Long Path Length Repair pre-loaded with this scan's flagged paths"/>
+                    <Button Grid.Column="4" Padding="14,8" Click="OnClose" Content="Close"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Findings -->
+        <Border Background="{DynamicResource AppLogBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6">
+            <ListBox ItemsSource="{Binding ReportLines}" Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="12,0"/>
+                        <Setter Property="MinHeight" Value="18"/>
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LogLine">
+                        <TextBlock Classes="logLine" Text="{Binding Text}" Foreground="{Binding Brush}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</Window>

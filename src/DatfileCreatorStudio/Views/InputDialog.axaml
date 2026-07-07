@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DatfileCreatorStudio.Views.InputDialog"
+        Title="Input"
+        Width="520" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <StackPanel Margin="16" Spacing="12">
+        <TextBlock Name="PromptText" TextWrapping="Wrap" FontSize="12"/>
+        <TextBox Name="ValueBox" FontSize="12"/>
+        <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="OkButton" Classes="accent" Padding="18,8" Content="OK" Click="OnOk"
+                    IsDefault="True"/>
+            <Button Padding="18,8" Content="Cancel" Click="OnCancel" IsCancel="True"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

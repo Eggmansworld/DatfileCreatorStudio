@@ -114,6 +114,26 @@ public partial class MainWindow : Window
             ViewModel.OutputRoot = path;
     }
 
+    private void OnOpenAnalyzer(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } vm)
+            return;
+        var window = new AnalyzerWindow
+        {
+            DataContext = new AnalyzerViewModel(vm),
+        };
+        window.Show(this);
+    }
+
+    private void OnOpenPathRepair(object? sender, RoutedEventArgs e)
+    {
+        var window = new LongPathRepairWindow
+        {
+            DataContext = new LongPathRepairViewModel(),
+        };
+        window.Show(this);
+    }
+
     private void OnPreviewClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } vm || vm.PreviewEntries.Count == 0)

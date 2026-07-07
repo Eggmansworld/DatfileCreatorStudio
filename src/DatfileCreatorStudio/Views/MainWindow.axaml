@@ -13,6 +13,18 @@
 
     <DockPanel>
 
+        <!-- ── Menu bar ──────────────────────────────────────────────── -->
+        <Menu DockPanel.Dock="Top" Background="{DynamicResource AppBarBackground}">
+            <MenuItem Header="_Tools">
+                <MenuItem Header="Analyze Folder Structure..." Click="OnOpenAnalyzer"
+                          ToolTip.Tip="Examine a collection's folder layout and get a recommended Generation mode and Structure before any hashing"/>
+                <MenuItem Header="Long Path Length Repair..." Click="OnOpenPathRepair"
+                          ToolTip.Tip="Find and interactively fix files whose full path length approaches or exceeds the Windows 260-character MAX_PATH limit"/>
+                <Separator/>
+                <MenuItem Header="(More tools arrive in upcoming sessions)" IsEnabled="False"/>
+            </MenuItem>
+        </Menu>
+
         <!-- ── Log drawer (bottom, auto-sliding) ─────────────────────── -->
         <ctrl:LogDrawer DockPanel.Dock="Bottom" DataContext="{Binding Drawer}"/>
 
