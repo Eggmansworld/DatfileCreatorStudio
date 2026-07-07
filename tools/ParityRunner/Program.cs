@@ -5,13 +5,18 @@ using DatfileCreator.Core;
 // JSON file that uses the Python suite's field names, so the same file can
 // drive both engines for byte-identical output comparison.
 //
-// Usage: ParityRunner --settings <file.json>
+// Usage: ParityRunner --settings <file.json> [--preview-dir <dir>]
+//   --preview-dir: additionally render every completed dat in all four
+//   structure options via the preview renderer and write them there.
 
 string? settingsPath = null;
+string? previewDir = null;
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--settings" && i + 1 < args.Length)
         settingsPath = args[++i];
+    else if (args[i] == "--preview-dir" && i + 1 < args.Length)
+        previewDir = args[++i];
 }
 
 if (settingsPath is null || !File.Exists(settingsPath))
@@ -81,5 +86,23 @@ var callbacks = new EngineCallbacks
     },
 };
 
-DatEngine.Run(settings, callbacks, CancellationToken.None, CancellationToken.None);
+var previews = previewDir is null ? null : new List<PreviewEntry>();
+DatEngine.Run(settings, callbacks, CancellationToken.None, CancellationToken.None, previews);
+
+if (previewDir is not null && previews is not null)
+{
+    Directory.CreateDirectory(previewDir);
+    foreach (var entry in previews)
+    {
+        foreach (string opt in (string[])["opt1", "opt2", "opt3", "opt4"])
+        {
+            string xml = PreviewRenderer.Render(entry, opt);
+            string name = $"{XmlText.SafeFilename(entry.DatName)}__{opt}.xml";
+            File.WriteAllText(Path.Combine(previewDir, name), xml,
+                              new System.Text.UTF8Encoding(false));
+        }
+    }
+    Console.WriteLine($"[preview] {previews.Count * 4} render(s) written to {previewDir}");
+}
+
 return failed ? 1 : 0;

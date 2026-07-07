@@ -42,7 +42,8 @@ public static class DatEngine
     private sealed record Job(string FolderPath, FolderNode Node, string OutDir);
 
     public static void Run(DatSettings s, EngineCallbacks cb,
-                           CancellationToken softStop, CancellationToken hardStop)
+                           CancellationToken softStop, CancellationToken hardStop,
+                           List<PreviewEntry>? previewResults = null)
     {
         var sw = Stopwatch.StartNew();
         var errors = new List<string>();
@@ -69,7 +70,28 @@ public static class DatEngine
 
         int maxWorkers = s.Multithread ? Math.Clamp(s.Threads, 1, 8) : 1;
 
-        cb.Status?.Invoke("Network cap: not yet available in Studio (Session 2) — reads run unthrottled.");
+        // ── Network bandwidth throttle ───────────────────────────────────
+        // Only applied when reading from a network path (UNC / mapped
+        // network drive) — local NVMe/SATA/USB drives never need it.
+        bool pathIsNet = NetworkInfo.IsNetworkPath(inputRoot);
+        double netRate = !pathIsNet
+            ? 0.0
+            : s.NetCapMbps > 0
+                ? s.NetCapMbps * 1_000_000.0 / 8
+                : NetworkInfo.DetectNetCapBytesPerSec(0.85);
+        var throttle = netRate > 0 ? new BandwidthThrottle(netRate) : null;
+
+        string capSuffix = "  |  BytesIO threshold: "
+            + (ZipAnalyzer.BytesIoThreshold / (1024 * 1024)) + " MB"
+            + "  |  Large-zip serialised (SMB lock active)";
+        if (!pathIsNet)
+            cb.Status?.Invoke("Network cap: N/A (local path — throttle disabled)" + capSuffix);
+        else if (netRate > 0)
+            cb.Status?.Invoke("Network cap: " + (netRate / (1_000_000.0 / 8)).ToString("F0")
+                + " Mbit/s  (" + (s.NetCapMbps == 0 ? "auto-detected" : "manual") + ")" + capSuffix);
+        else
+            cb.Status?.Invoke("Network cap: unlimited  (no NIC speed detected)" + capSuffix);
+
         if (s.Incremental)
             cb.Status?.Invoke("Incremental update arrives in Session 3 — performing a full hash run.");
 
@@ -321,9 +343,11 @@ public static class DatEngine
                 {
                     if (isMixed)
                         return (FileHasher.HashFile(itemPath, s.IncludeMd5, s.IncludeSha256,
-                                                    s.IncludeBlake3, hardStop), null);
+                                                    s.IncludeBlake3, hardStop,
+                                                    throttle: throttle), null);
                     var (list, diag) = ZipAnalyzer.Analyze(itemPath, s.IncludeMd5, s.IncludeSha256,
-                                                           s.InclFileDate, s.IncludeBlake3, hardStop);
+                                                           s.InclFileDate, s.IncludeBlake3, hardStop,
+                                                           throttle);
                     return ((list, diag), null);
                 }
                 catch (OperationCanceledException)
@@ -424,6 +448,21 @@ public static class DatEngine
             {
                 writtenDats++;
                 cb.DatWritten?.Invoke(datPath, writtenDats);
+            }
+
+            // Store for the preview window (only complete jobs with data)
+            if (previewResults is not null && !incomplete
+                && (data.Mixed.Count > 0 || data.Zipped.Count > 0))
+            {
+                previewResults.Add(new PreviewEntry
+                {
+                    DatName = datName,
+                    HeaderDate = headerDate,
+                    Node = job.Node,
+                    Data = data,
+                    Settings = s.Clone(),
+                    IsTree = isTree,
+                });
             }
 
             if (incomplete)

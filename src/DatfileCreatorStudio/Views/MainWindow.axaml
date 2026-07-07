@@ -43,6 +43,14 @@
                         <TextBlock Text="Hard Stop"/>
                     </StackPanel>
                 </Button>
+                <Button Grid.Column="3" HorizontalAlignment="Left" Click="OnPreviewClick"
+                        IsEnabled="{Binding HasPreview}" Margin="10,0,0,0" Padding="16,10"
+                        ToolTip.Tip="Preview every dat produced by the last run and compare all four structure options instantly — re-rendered from in-memory data, no re-hashing">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static root:Icons.Magnify}" Width="13" Height="13"/>
+                        <TextBlock Text="Preview Dats"/>
+                    </StackPanel>
+                </Button>
 
                 <TextBlock Grid.Column="4" Text="Theme:" VerticalAlignment="Center" Margin="0,0,8,0"
                            Classes="subtle"/>
@@ -242,8 +250,15 @@
                                               Width="70" IsEnabled="{Binding Multithread}"
                                               ToolTip.Tip="Number of concurrent worker threads (1–8). On a 1 Gbps link, 4–8 threads typically saturates the connection."/>
                                 </StackPanel>
+                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                    <TextBlock Classes="fieldLabel" Text="Net cap Mbit/s"/>
+                                    <TextBox Text="{Binding NetCapText}" Width="70" FontSize="12"
+                                             ToolTip.Tip="Caps read throughput from network shares (token-bucket limiter across all threads). 0 = auto: 85% of your fastest NIC's speed, leaving headroom for other traffic. Only applies when the input path is a network share — local drives are never throttled."/>
+                                    <TextBlock Classes="subtle" FontSize="11" VerticalAlignment="Center"
+                                               Text="0 = auto (85% of NIC)"/>
+                                </StackPanel>
                                 <TextBlock Classes="subtle" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
-                                           Text="Network cap and incremental update arrive in upcoming sessions."/>
+                                           Text="Incremental update arrives in an upcoming session."/>
                             </StackPanel>
                         </Grid>
                     </Grid>

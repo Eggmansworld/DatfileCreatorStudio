@@ -76,7 +76,8 @@ public static class FileHasher
     /// </summary>
     public static FileHashResult HashFile(
         string path, bool includeMd5, bool includeSha256, bool includeBlake3,
-        CancellationToken cancel, int chunk = DefaultChunk)
+        CancellationToken cancel, int chunk = DefaultChunk,
+        BandwidthThrottle? throttle = null)
     {
         using var hasher = new MultiHasher(withCrc: true, includeMd5, includeSha256, includeBlake3);
         long size = 0;
@@ -90,6 +91,7 @@ public static class FileHasher
             int read = f.Read(buffer, 0, buffer.Length);
             if (read == 0)
                 break;
+            throttle?.Consume(read, cancel);
             size += read;
             hasher.Update(buffer.AsSpan(0, read));
         }

@@ -61,6 +61,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _extExclude = d.ExtExclude;
         _multithread = d.Multithread;
         _threads = Math.Clamp(d.Threads, 1, 8);
+        _netCapText = d.NetCapMbps > 0 ? d.NetCapMbps.ToString() : "0";
         _selectedTheme = settings.Config.Theme;
 
         Drawer.ReportInfo($"Config: {SettingsService.ConfigPath}");
@@ -140,6 +141,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public int[] ThreadChoices { get; } = [1, 2, 3, 4, 5, 6, 7, 8];
 
+    /// <summary>Net cap in Mbit/s as text; "0" or invalid = auto (85% of NIC speed).</summary>
+    [ObservableProperty] private string _netCapText;
+
+    // ── Preview ──────────────────────────────────────────────────────────
+
+    /// <summary>Completed dats from the most recent run, for the preview window.</summary>
+    public List<PreviewEntry> PreviewEntries { get; private set; } = [];
+
+    [ObservableProperty] private bool _hasPreview;
+
     [ObservableProperty] private bool _includeSha256;
 
     partial void OnIncludeSha256Changed(bool value)
@@ -214,6 +225,7 @@ public partial class MainWindowViewModel : ViewModelBase
         d.ExtExclude = ExtExclude;
         d.Multithread = Multithread;
         d.Threads = Math.Clamp(Threads, 1, 8);
+        d.NetCapMbps = int.TryParse(NetCapText.Trim(), out int cap) && cap > 0 ? cap : 0;
         return d;
     }
 
@@ -250,6 +262,8 @@ public partial class MainWindowViewModel : ViewModelBase
         _hardStop = new CancellationTokenSource();
         IsRunning = true;
         Drawer.IsRunning = true;
+        HasPreview = false;
+        var previews = new List<PreviewEntry>();
 
         string summary = $"{(s.IsMixed ? "Mixed" : "Zipped")} | {s.GenMode} | {s.Structure} | "
                        + $"{s.DatFormat} | in: {s.InputRoot} | out: {s.OutputRoot}";
@@ -296,7 +310,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var soft = _softStop.Token;
             var hard = _hardStop.Token;
-            await Task.Run(() => DatEngine.Run(s, callbacks, soft, hard));
+            await Task.Run(() => DatEngine.Run(s, callbacks, soft, hard, previews));
             stopped = _softStop.IsCancellationRequested || _hardStop.IsCancellationRequested;
         }
         catch (Exception ex)
@@ -307,6 +321,10 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsRunning = false;
             Drawer.IsRunning = false;
+            PreviewEntries = previews;
+            HasPreview = previews.Count > 0;
+            if (HasPreview)
+                Drawer.ReportInfo($"{previews.Count} dat(s) available in the preview window.");
             Drawer.OnRunCompleted(ok, errorCount, stopped);
             _softStop?.Dispose();
             _hardStop?.Dispose();

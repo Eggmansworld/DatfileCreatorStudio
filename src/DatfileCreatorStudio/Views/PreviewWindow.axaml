@@ -1,0 +1,79 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.PreviewWindow"
+        x:DataType="vm:PreviewWindowViewModel"
+        Title="Dat Preview"
+        Width="1200" Height="780"
+        MinWidth="900" MinHeight="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel Margin="12">
+
+        <!-- Bottom bar -->
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,*,Auto" Margin="0,10,0,0">
+            <Button Grid.Column="0" Click="OnSaveAsClick" Padding="14,8"
+                    ToolTip.Tip="Write the currently displayed XML to a file of your choosing, named with the structure label appended">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{x:Static root:Icons.ContentSave}" Width="13" Height="13"/>
+                    <TextBlock Text="Save Chosen Dat Structure As..."/>
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="1" Click="OnCopyAllClick" Padding="14,8" Margin="10,0,0,0"
+                    ToolTip.Tip="Copy the full XML to the clipboard">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{x:Static root:Icons.ContentCopy}" Width="13" Height="13"/>
+                    <TextBlock Text="Copy All"/>
+                </StackPanel>
+            </Button>
+            <TextBlock Grid.Column="3" Text="{Binding InfoText}" Classes="subtle" FontSize="11"
+                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="700"/>
+        </Grid>
+
+        <!-- Structure selector -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,8" Margin="0,0,0,10">
+            <StackPanel Orientation="Horizontal" Spacing="18">
+                <TextBlock Text="Structure:" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"
+                           ToolTip.Tip="Re-renders the selected dat instantly from in-memory hash data — no re-hashing. Compare the options side-by-side before committing to one for a project."/>
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="1 — Dirs"
+                             IsChecked="{Binding StructOpt1}"/>
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="2 — Archives as Games"
+                             IsChecked="{Binding StructOpt2}"/>
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="3 — First Level Dirs as Games"
+                             IsChecked="{Binding StructOpt3}"/>
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="4 — First Level Dirs as Games + Merge Dirs in Games"
+                             IsChecked="{Binding StructOpt4}"/>
+            </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="290,10,*">
+            <!-- Dat list -->
+            <Border Grid.Column="0" Classes="card" Padding="6">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="sectionHeader" Text="Completed Dats" Margin="8,4,0,6"/>
+                    <ListBox ItemsSource="{Binding DatNames}" SelectedIndex="{Binding SelectedIndex}"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- XML view -->
+            <Border Grid.Column="2" Background="{DynamicResource AppLogBackground}"
+                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                              Padding="12,8">
+                    <SelectableTextBlock Name="XmlView"
+                                         FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,Liberation Mono,monospace"
+                                         FontSize="12"/>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

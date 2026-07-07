@@ -73,7 +73,10 @@ foreach ($run in $runs) {
         New-Item -ItemType Directory -Force $side.dir | Out-Null
     }
 
-    foreach ($pair in @(@($pyOut, "py"), @($csOut, "cs"))) {
+    $pyPreview = Join-Path $runsDir "$name\py-previews"
+    $csPreview = Join-Path $runsDir "$name\cs-previews"
+
+    foreach ($pair in @(@($pyOut, "py", $pyPreview), @($csOut, "cs", $csPreview))) {
         $settings = $common.Clone()
         foreach ($k in $run.Keys) { if ($k -ne "name") { $settings[$k] = $run[$k] } }
         $settings["output_root"] = $pair[0]
@@ -81,9 +84,9 @@ foreach ($run in $runs) {
         $settings | ConvertTo-Json | Set-Content -Path $settingsPath -Encoding UTF8
 
         if ($pair[1] -eq "py") {
-            $log = python (Join-Path $PSScriptRoot "run_python.py") --settings $settingsPath 2>&1
+            $log = python (Join-Path $PSScriptRoot "run_python.py") --settings $settingsPath --preview-dir $pair[2] 2>&1
         } else {
-            $log = & $runnerExe --settings $settingsPath 2>&1
+            $log = & $runnerExe --settings $settingsPath --preview-dir $pair[2] 2>&1
         }
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[$name/$($pair[1])] engine reported errors:" -ForegroundColor Yellow
@@ -91,11 +94,15 @@ foreach ($run in $runs) {
         }
     }
 
-    # ── Compare ──────────────────────────────────────────────────────────
+    # ── Compare (written dats + preview renders) ─────────────────────────
     $pyFiles = @(Get-ChildItem -Recurse -File $pyOut | ForEach-Object {
         $_.FullName.Substring($pyOut.Length + 1) })
     $csFiles = @(Get-ChildItem -Recurse -File $csOut | ForEach-Object {
         $_.FullName.Substring($csOut.Length + 1) })
+    $pyFiles += @(Get-ChildItem -Recurse -File $pyPreview | ForEach-Object {
+        "previews\" + $_.FullName.Substring($pyPreview.Length + 1) })
+    $csFiles += @(Get-ChildItem -Recurse -File $csPreview | ForEach-Object {
+        "previews\" + $_.FullName.Substring($csPreview.Length + 1) })
 
     $status = "PASS"
     $detail = "$($pyFiles.Count) dat(s)"
@@ -105,9 +112,17 @@ foreach ($run in $runs) {
         $detail = "file lists differ: " + (($missing | ForEach-Object {
             "$($_.SideIndicator) $($_.InputObject)" }) -join "; ")
     } else {
+        $previewCount = @($pyFiles | Where-Object { $_.StartsWith("previews\") }).Count
+        $detail = "$($pyFiles.Count - $previewCount) dat(s) + $previewCount preview render(s)"
         foreach ($rel in $pyFiles) {
-            $a = Get-FileHash -Algorithm SHA256 (Join-Path $pyOut $rel)
-            $b = Get-FileHash -Algorithm SHA256 (Join-Path $csOut $rel)
+            if ($rel.StartsWith("previews\")) {
+                $sub = $rel.Substring(9)
+                $a = Get-FileHash -Algorithm SHA256 (Join-Path $pyPreview $sub)
+                $b = Get-FileHash -Algorithm SHA256 (Join-Path $csPreview $sub)
+            } else {
+                $a = Get-FileHash -Algorithm SHA256 (Join-Path $pyOut $rel)
+                $b = Get-FileHash -Algorithm SHA256 (Join-Path $csOut $rel)
+            }
             if ($a.Hash -ne $b.Hash) {
                 $status = "FAIL"
                 $detail = "byte mismatch: $rel"

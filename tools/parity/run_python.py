@@ -5,6 +5,10 @@ harness. Loads the same settings JSON the C# ParityRunner consumes and runs
 one generation pass.
 
 Usage: python run_python.py --settings <file.json> [--suite <dir>]
+                            [--preview-dir <dir>]
+
+--preview-dir: additionally render every completed dat in all four structure
+options via render_preview() and write them there.
 """
 import json
 import os
@@ -19,6 +23,7 @@ def main() -> int:
     args = sys.argv[1:]
     settings_path = None
     suite_dir = SUITE_DIR
+    preview_dir = None
     i = 0
     while i < len(args):
         if args[i] == "--settings" and i + 1 < len(args):
@@ -26,6 +31,9 @@ def main() -> int:
             i += 2
         elif args[i] == "--suite" and i + 1 < len(args):
             suite_dir = args[i + 1]
+            i += 2
+        elif args[i] == "--preview-dir" and i + 1 < len(args):
+            preview_dir = args[i + 1]
             i += 2
         else:
             i += 1
@@ -61,8 +69,22 @@ def main() -> int:
 
     t = threading.Thread(target=drain, daemon=True)
     t.start()
-    suite.process(s, q, threading.Event(), threading.Event(), None)
+    preview_results = [] if preview_dir else None
+    suite.process(s, q, threading.Event(), threading.Event(), preview_results)
     t.join(timeout=30)
+
+    if preview_dir and preview_results is not None:
+        os.makedirs(preview_dir, exist_ok=True)
+        count = 0
+        for entry in preview_results:
+            for opt in ("opt1", "opt2", "opt3", "opt4"):
+                xml = suite.render_preview(entry, opt)
+                name = f"{suite.safe_filename(entry.dat_name)}__{opt}.xml"
+                with open(os.path.join(preview_dir, name), "w",
+                          encoding="utf-8", newline="\n") as f:
+                    f.write(xml)
+                count += 1
+        print(f"[preview] {count} render(s) written to {preview_dir}")
 
     if "msg" not in done_msg:
         print("[error] engine did not report done", file=sys.stderr)

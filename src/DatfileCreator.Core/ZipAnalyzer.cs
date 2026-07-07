@@ -41,7 +41,8 @@ public static class ZipAnalyzer
 
     public static (List<ZipRomEntry> Results, string Diag) Analyze(
         string zipPath, bool includeMd5, bool includeSha256, bool inclDate,
-        bool includeBlake3, CancellationToken cancel)
+        bool includeBlake3, CancellationToken cancel,
+        BandwidthThrottle? throttle = null)
     {
         var stopwatch = Stopwatch.StartNew();
         var results = new List<ZipRomEntry>();
@@ -66,10 +67,14 @@ public static class ZipAnalyzer
             {
                 cancel.ThrowIfCancellationRequested();
                 byte[] raw = File.ReadAllBytes(zipPath);
+                // Post-consume throttle: rate-limit AFTER the read so the
+                // actual read runs at full speed; the sleep falls between zips
+                if (throttle is not null && raw.Length > 0)
+                    throttle.Consume(raw.Length, cancel);
                 cancel.ThrowIfCancellationRequested();
                 using var ms = new MemoryStream(raw, writable: false);
                 HashEntries(ms, raw, results, slowEntries,
-                            includeMd5, includeSha256, inclDate, includeBlake3, cancel);
+                            includeMd5, includeSha256, inclDate, includeBlake3, cancel, null);
             }
             else
             {
@@ -82,7 +87,7 @@ public static class ZipAnalyzer
                     using var fs = new FileStream(zipPath, FileMode.Open, FileAccess.Read,
                                                   FileShare.Read, bufferSize: 1 * 1024 * 1024);
                     HashEntries(fs, memBuffer: null, results, slowEntries,
-                                includeMd5, includeSha256, inclDate, includeBlake3, cancel);
+                                includeMd5, includeSha256, inclDate, includeBlake3, cancel, throttle);
                 }
                 finally
                 {
@@ -137,7 +142,7 @@ public static class ZipAnalyzer
         Stream stream, byte[]? memBuffer,
         List<ZipRomEntry> results, List<string> slowEntries,
         bool includeMd5, bool includeSha256, bool inclDate, bool includeBlake3,
-        CancellationToken cancel)
+        CancellationToken cancel, BandwidthThrottle? streamThrottle)
     {
         var allEntries = ZipCentralDirectory.Read(stream);
         if (allEntries.Count == 0)
@@ -177,6 +182,11 @@ public static class ZipAnalyzer
 
             if (entry.UncompressedSize > 0)
                 HashOneEntry(stream, memBuffer, entry, hasher, cancel);
+
+            // Post-consume throttle only for the network (stream) path —
+            // compressed bytes are the actual network traffic
+            if (streamThrottle is not null && entry.CompressedSize > 0)
+                streamThrottle.Consume(entry.CompressedSize, cancel);
 
             double entryElapsed = Stopwatch.GetElapsedTime(tEntry).TotalSeconds;
             if (entryElapsed >= EntrySlowSeconds)

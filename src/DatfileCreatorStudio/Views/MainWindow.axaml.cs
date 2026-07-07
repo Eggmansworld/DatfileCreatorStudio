@@ -67,6 +67,17 @@ public partial class MainWindow : Window
             ViewModel.OutputRoot = path;
     }
 
+    private void OnPreviewClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } vm || vm.PreviewEntries.Count == 0)
+            return;
+        var window = new PreviewWindow
+        {
+            DataContext = new PreviewWindowViewModel(vm.PreviewEntries),
+        };
+        window.Show(this);
+    }
+
     private async Task<string?> PickFolderAsync(string title)
     {
         var result = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
