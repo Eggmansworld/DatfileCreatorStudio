@@ -374,6 +374,133 @@ $results += [pscustomobject]@{ Run = $bhuName; Status = $status; Detail = $detai
 $colour = if ($status -eq "PASS") { "Green" } else { "Red" }
 Write-Host ("{0,-28} {1}  {2}" -f $bhuName, $status, $detail) -ForegroundColor $colour
 
+# ══ File-wrangling tools parity (Merge / Packer / Extractor) ══════════════
+Write-Host ""
+Write-Host "File tools parity:" -ForegroundColor Cyan
+
+# ── Merge Datfiles (writes dats — full byte parity) ──────────────────────
+# Category root with first-level subfolders holding deeper dats. [ADF] merges
+# two depth-2 dats; [Deep] tests depth-3 rom-name prefixing; [BIN] is skipped
+# (dat present directly); [Empty] has nothing.
+function New-MergeSourceDat($path, $name, $game, $rom) {
+    $dat = @"
+<?xml version="1.0"?>
+<datafile>
+	<header>
+		<name>$name</name>
+		<description>merge source</description>
+		<version>1</version>
+		<date>2026-01-01</date>
+		<author>Src</author>
+	</header>
+	<game name="$game">
+		<rom name="$rom" size="8" crc="0a0b0c0d" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
+	</game>
+</datafile>
+"@
+    # .NET file APIs treat paths literally — the [ADF]/[#-B] folder names
+    # contain [ ] which PowerShell's -Path would interpret as wildcards.
+    [System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($path)) | Out-Null
+    [System.IO.File]::WriteAllText($path, $dat, (New-Object System.Text.UTF8Encoding($false)))
+}
+
+$mergeSrc = Join-Path $parityOut "merge-src\Category"
+if (Test-Path (Split-Path $mergeSrc)) { Remove-Item -Recurse -Force (Split-Path $mergeSrc) }
+New-MergeSourceDat "$mergeSrc\[ADF]\[#-B]\a.xml"        "src-ab"   "GameAB"   "ab.adf"
+New-MergeSourceDat "$mergeSrc\[ADF]\[C-D]\c.xml"        "src-cd"   "GameCD"   "cd.adf"
+New-MergeSourceDat "$mergeSrc\[Deep]\[X]\[A-F]\d.xml"   "src-deep" "GameDeep" "deep.adf"
+New-MergeSourceDat "$mergeSrc\[BIN]\direct.xml"         "src-bin"  "GameBin"  "bin.rom"
+New-Item -ItemType Directory -Force "$mergeSrc\[Empty]" | Out-Null
+
+$mergePy = Join-Path $parityOut "merge-run\py\Category"
+$mergeCs = Join-Path $parityOut "merge-run\cs\Category"
+if (Test-Path (Split-Path (Split-Path $mergePy))) { Remove-Item -Recurse -Force (Split-Path (Split-Path $mergePy)) }
+Copy-Item -Recurse $mergeSrc $mergePy
+Copy-Item -Recurse $mergeSrc $mergeCs
+
+$pyLines = @(python (Join-Path $PSScriptRoot "run_tools.py") merge $mergePy "2026-08-01" 2>&1) | Sort-Object
+$csLines = @(& $runnerExe --merge $mergeCs --merge-date "2026-08-01" 2>&1) | Sort-Object
+
+$status = "PASS"; $detail = ""
+if (@(Compare-Object $pyLines $csLines).Count -gt 0) {
+    $status = "FAIL"; $detail = "merge report lines differ"
+} else {
+    $pyFiles = @(Get-ChildItem -Recurse -File $mergePy | ForEach-Object { $_.FullName.Substring($mergePy.Length + 1) })
+    $csFiles = @(Get-ChildItem -Recurse -File $mergeCs | ForEach-Object { $_.FullName.Substring($mergeCs.Length + 1) })
+    if (@(Compare-Object $pyFiles $csFiles).Count -gt 0) {
+        $status = "FAIL"; $detail = "merged file lists differ"
+    } else {
+        foreach ($rel in $pyFiles) {
+            $a = Get-FileHash -Algorithm SHA256 (Join-Path $mergePy $rel)
+            $b = Get-FileHash -Algorithm SHA256 (Join-Path $mergeCs $rel)
+            if ($a.Hash -ne $b.Hash) { $status = "FAIL"; $detail = "byte mismatch: $rel"; break }
+        }
+        if ($status -eq "PASS") {
+            $mergedN = @($pyLines | Where-Object { $_ -match "^merge\|" }).Count
+            $detail = "$mergedN merged dat(s) byte-identical"
+        }
+    }
+}
+$results += [pscustomobject]@{ Run = "tools_merge"; Status = $status; Detail = $detail }
+$colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+Write-Host ("{0,-28} {1}  {2}" -f "tools_merge", $status, $detail) -ForegroundColor $colour
+
+# ── ZIP Store Packer (entry listing parity) ──────────────────────────────
+$packSrc = Join-Path $parityOut "pack-src"
+if (Test-Path $packSrc) { Remove-Item -Recurse -Force $packSrc }
+New-Item -ItemType Directory -Force "$packSrc\sub" | Out-Null
+Set-Content -Path "$packSrc\one.bin"     -Value "content of one bin file"          -Encoding Ascii -NoNewline
+Set-Content -Path "$packSrc\two.rom"     -Value "another rom file with more bytes" -Encoding Ascii -NoNewline
+Set-Content -Path "$packSrc\sub\three.bin" -Value "nested bin"                     -Encoding Ascii -NoNewline
+Set-Content -Path "$packSrc\keep.txt"    -Value "not a target extension"           -Encoding Ascii -NoNewline
+
+$packPy = Join-Path $parityOut "pack-run\py"
+$packCs = Join-Path $parityOut "pack-run\cs"
+if (Test-Path (Split-Path $packPy)) { Remove-Item -Recurse -Force (Split-Path $packPy) }
+Copy-Item -Recurse $packSrc $packPy
+Copy-Item -Recurse $packSrc $packCs
+
+$pyLines = @(python (Join-Path $PSScriptRoot "run_tools.py") pack $packPy "bin,rom" 2>&1) | Sort-Object
+$csLines = @(& $runnerExe --pack $packCs --pack-exts "bin,rom" 2>&1) | Sort-Object
+$status = "PASS"; $detail = ""
+if (@(Compare-Object $pyLines $csLines).Count -gt 0) {
+    $status = "FAIL"
+    $detail = ((Compare-Object $pyLines $csLines | Select-Object -First 2 | ForEach-Object {
+        "$($_.SideIndicator) $($_.InputObject)" }) -join "; ")
+} else {
+    $pyLeft = @(Get-ChildItem -Recurse -File $packPy).Count
+    $detail = "$($pyLines.Count) zip entr(ies) identical, $pyLeft file(s) remain"
+}
+$results += [pscustomobject]@{ Run = "tools_pack"; Status = $status; Detail = $detail }
+$colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+Write-Host ("{0,-28} {1}  {2}" -f "tools_pack", $status, $detail) -ForegroundColor $colour
+
+# ── Recursive Archive Extractor (tree parity; requires 7z) ───────────────
+$sevenZip = "C:\Program Files\7-Zip-Zstandard\7z.exe"
+if (Test-Path $sevenZip) {
+    $exPy = Join-Path $parityOut "extract-run\py"
+    $exCs = Join-Path $parityOut "extract-run\cs"
+    if (Test-Path (Split-Path $exPy)) { Remove-Item -Recurse -Force (Split-Path $exPy) }
+    Copy-Item -Recurse (Join-Path $repo "test_rvzstd_archives") $exPy
+    Copy-Item -Recurse (Join-Path $repo "test_rvzstd_archives") $exCs
+
+    $pyLines = @(python (Join-Path $PSScriptRoot "run_tools.py") extract $exPy $sevenZip 2>&1) | Sort-Object
+    $csLines = @(& $runnerExe --extract $exCs --sevenzip $sevenZip 2>&1) | Sort-Object
+    $status = "PASS"; $detail = ""
+    if (@(Compare-Object $pyLines $csLines).Count -gt 0) {
+        $status = "FAIL"
+        $detail = ((Compare-Object $pyLines $csLines | Select-Object -First 2 | ForEach-Object {
+            "$($_.SideIndicator) $($_.InputObject)" }) -join "; ")
+    } else {
+        $detail = "$($pyLines.Count) extracted path(s) identical"
+    }
+    $results += [pscustomobject]@{ Run = "tools_extract"; Status = $status; Detail = $detail }
+    $colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+    Write-Host ("{0,-28} {1}  {2}" -f "tools_extract", $status, $detail) -ForegroundColor $colour
+} else {
+    Write-Host ("{0,-28} {1}  {2}" -f "tools_extract", "SKIP", "7z-zstd not found") -ForegroundColor DarkGray
+}
+
 # ══ Folder Structure Analyzer parity ══════════════════════════════════════
 Write-Host ""
 Write-Host "Analyzer parity:" -ForegroundColor Cyan

@@ -7,9 +7,13 @@ Usage:
   python run_tools.py count <folder>
   python run_tools.py validate <fileOrFolder>
   python run_tools.py bhu <target> <date> [field=value ...] [--clear field] [--fp]
+  python run_tools.py merge <categoryRoot> <date>
+  python run_tools.py pack <folder> <ext1,ext2>
+  python run_tools.py extract <folder> <7zPath>
 """
 import os
 import sys
+import zipfile
 from pathlib import Path
 
 SUITE_DIR = r"C:\Eggmansworld\Datfile_Creator_Suite"
@@ -80,6 +84,77 @@ def mode_bhu(argv: list) -> int:
     return 0
 
 
+def mode_merge(root: str, date: str) -> int:
+    category = os.path.basename(root.rstrip("\\/"))
+    for job in suite._dm_scan_for_merge(root):
+        if job["action"] != "merge":
+            continue
+        merged_games, header, err = suite._dm_collect_games(job["path"], job["deeper"])
+        if err:
+            print(f"merge|{job['name']}|ERROR|{err}")
+            continue
+        dat_name = category + " - " + job["name"]
+        out_fn = suite.make_dat_filename(dat_name, date)
+        out_path = os.path.join(job["path"], out_fn)
+        suite._dm_write_merged_dat(out_path, dat_name, merged_games, header, date)
+        rom_total = sum(len(v) for v in merged_games.values())
+        rel = os.path.relpath(out_path, root).replace("\\", "/")
+        print(f"merge|{job['name']}|{len(merged_games)}|{rom_total}|{rel}")
+    return 0
+
+
+def mode_pack(folder: str, exts_csv: str) -> int:
+    exts = ["." + e.strip().lstrip(".").lower() for e in exts_csv.split(",") if e.strip()]
+    fp_root = Path(folder)
+    files = sorted({p for ext in exts for p in fp_root.rglob(f"*{ext}")})
+    for fp in files:
+        zip_path = fp.with_suffix(".zip")
+        if zip_path.exists():
+            continue
+        with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as zf:
+            zf.write(fp, fp.name)
+        # verify + delete original (mirror the suite's default flow)
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            if zf.testzip() is None and zf.getinfo(fp.name).file_size == fp.stat().st_size:
+                fp.unlink()
+    for zip_path in sorted(fp_root.rglob("*.zip")):
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            for info in zf.infolist():
+                rel = os.path.relpath(zip_path, folder).replace("\\", "/")
+                print(f"zip|{rel}|{info.filename}|{info.file_size}"
+                      f"|{info.CRC & 0xFFFFFFFF:08x}|{info.compress_type}")
+    return 0
+
+
+def mode_extract(folder: str, sevenzip: str) -> int:
+    import collections
+    src_root = Path(folder)
+    exts = {".zip", ".7z", ".rar"}
+    initial = sorted({p for ext in exts for p in src_root.rglob(f"*{ext}")})
+    queue = collections.deque(initial)
+    queued = set(initial)
+    while queue:
+        arc = queue.popleft()
+        mode, _ = suite._au_classify(arc, sevenzip)
+        if mode == "bad":
+            continue
+        try:
+            rel_parent = arc.relative_to(src_root).parent
+        except ValueError:
+            rel_parent = Path(".")
+        out_dir = arc.parent if mode == "single" \
+            else arc.parent / suite._au_sanitize(arc.stem)
+        if mode == "single":
+            suite._au_extract_single(arc, out_dir, sevenzip)
+        else:
+            suite._au_extract_to_folder(arc, out_dir, sevenzip)
+    for f in sorted(src_root.rglob("*")):
+        if f.is_file():
+            rel = os.path.relpath(f, folder).replace("\\", "/")
+            print(f"tree|{rel}|{f.stat().st_size}")
+    return 0
+
+
 def main() -> int:
     if len(sys.argv) < 3:
         print(__doc__, file=sys.stderr)
@@ -91,6 +166,12 @@ def main() -> int:
         return mode_validate(sys.argv[2])
     if mode == "bhu":
         return mode_bhu(sys.argv[2:])
+    if mode == "merge":
+        return mode_merge(sys.argv[2], sys.argv[3])
+    if mode == "pack":
+        return mode_pack(sys.argv[2], sys.argv[3])
+    if mode == "extract":
+        return mode_extract(sys.argv[2], sys.argv[3])
     print("Unknown mode: " + mode, file=sys.stderr)
     return 2
 

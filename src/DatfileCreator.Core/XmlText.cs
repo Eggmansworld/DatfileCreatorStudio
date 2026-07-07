@@ -106,10 +106,14 @@ public static partial class XmlText
     }
 
     /// <summary>
-    /// Escape like Python's xml.sax.saxutils.escape: &amp;, &lt;, &gt; always.
+    /// Escape like Python's xml.sax.saxutils.escape: &amp;, &lt;, &gt; only.
+    /// Note: does NOT escape quotes — matches the suite's Merge Datfiles
+    /// passthrough writer, which uses this for attribute values too.
     /// </summary>
-    private static string EscapeBase(string value) =>
+    public static string EscapeXml(string value) =>
         value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+
+    private static string EscapeBase(string value) => EscapeXml(value);
 
     /// <summary>Escape for XML attribute values, fixing CP437/XML char issues first.</summary>
     public static string Xa(string value) =>

@@ -16,6 +16,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public LogDrawerViewModel Drawer { get; } = new();
 
+    /// <summary>The configured 7-Zip-ZStandard path (used by the Archive Extractor tool).</summary>
+    public string SevenZipPath => _settings.Config.Dat.SevenZipPath;
+
     public MainWindowViewModel(SettingsService settings)
     {
         _settings = settings;

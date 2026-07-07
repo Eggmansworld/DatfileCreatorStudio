@@ -1,0 +1,135 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.RecursiveArchiveExtractorWindow"
+        x:DataType="vm:RecursiveArchiveExtractorViewModel"
+        Title="Recursive Archive Extractor"
+        Width="960" Height="840"
+        MinWidth="800" MinHeight="640"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel Margin="12">
+
+        <!-- Source + 7z path -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,8"
+                ToolTip.Tip="Recursively extracts ZIP, 7Z and RAR archives into their own named subfolders. Detects archives nested inside extracted content and can auto-extract them in the same pass. Uses 7-Zip-ZStandard.">
+            <StackPanel Spacing="6">
+                <Grid ColumnDefinitions="150,*,Auto">
+                    <TextBlock Grid.Column="0" Classes="fieldLabel" Text="Source folder"/>
+                    <TextBox Grid.Column="1" Name="SourceBox" Text="{Binding SourcePath}" FontSize="12"
+                             Watermark="Folder to scan for archives — drag &amp; drop works"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowseSource"
+                            ToolTip.Tip="Browse for the source folder">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+                <Grid ColumnDefinitions="150,*,Auto">
+                    <TextBlock Grid.Column="0" Classes="fieldLabel" Text="7-Zip-ZStandard (7z.exe)"/>
+                    <TextBox Grid.Column="1" Text="{Binding SevenZipPath}" FontSize="12"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowse7z"
+                            ToolTip.Tip="Browse for 7z.exe">
+                        <PathIcon Data="{x:Static root:Icons.FileDocument}" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Destination + options -->
+        <Border DockPanel.Dock="Top" Classes="card" Padding="12,10" Margin="0,0,0,8">
+            <StackPanel Spacing="6">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <TextBlock Classes="fieldLabel" Text="Destination:"/>
+                    <RadioButton Classes="opt" GroupName="exDst" Content="Same as source"
+                                 IsChecked="{Binding DestSame}"/>
+                    <RadioButton Classes="opt" GroupName="exDst" Content="Mirror to custom destination"
+                                 IsChecked="{Binding DestCustom}"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="150,*,Auto" IsEnabled="{Binding CustomDestEnabled}">
+                    <TextBlock Grid.Column="0" Classes="fieldLabel" Text="Destination root"/>
+                    <TextBox Grid.Column="1" Name="CustomDestBox" Text="{Binding CustomDest}" FontSize="12"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowseCustomDest">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Classes="fieldLabel" Text="Formats:"/>
+                    <CheckBox Classes="opt" Content=".zip" IsChecked="{Binding FmtZip}"/>
+                    <CheckBox Classes="opt" Content=".7z" IsChecked="{Binding Fmt7z}"/>
+                    <CheckBox Classes="opt" Content=".rar" IsChecked="{Binding FmtRar}"/>
+                    <CheckBox Classes="opt" Content="Recursive" Margin="12,0,0,0" IsChecked="{Binding Recursive}"/>
+                    <CheckBox Classes="opt" Content="Auto-extract nested archives" Margin="12,0,0,0"
+                              IsChecked="{Binding AutoNested}"
+                              ToolTip.Tip="When an extracted archive contains further archives, queue and extract them in the same pass"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Classes="fieldLabel" Text="After extraction:"/>
+                    <RadioButton Classes="opt" GroupName="exAfter" Content="Keep archive"
+                                 IsChecked="{Binding AfterKeep}"/>
+                    <RadioButton Classes="opt" GroupName="exAfter" Content="→ Recycle Bin"
+                                 IsChecked="{Binding AfterRecycle}"/>
+                    <RadioButton Classes="opt" GroupName="exAfter" Content="→ Permanent delete"
+                                 IsChecked="{Binding AfterPermanent}"/>
+                    <RadioButton Classes="opt" GroupName="exAfter" Content="→ Move (mirror)"
+                                 IsChecked="{Binding AfterMoveMirror}"/>
+                    <RadioButton Classes="opt" GroupName="exAfter" Content="→ Move (flat dump)"
+                                 IsChecked="{Binding AfterMoveFlat}"/>
+                </StackPanel>
+                <Grid ColumnDefinitions="150,*,Auto" IsVisible="{Binding MoveDestVisible}">
+                    <TextBlock Grid.Column="0" Classes="fieldLabel" Text="Move destination"/>
+                    <TextBox Grid.Column="1" Name="MoveDestBox" Text="{Binding MoveDest}" FontSize="12"/>
+                    <Button Grid.Column="2" Margin="8,0,0,0" Click="OnBrowseMoveDest">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Status + progress -->
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,6" Spacing="3">
+            <TextBlock Text="{Binding StatusText}" Classes="subtle" FontSize="11"/>
+            <ProgressBar Height="8" Minimum="0" Maximum="100" Value="{Binding Progress}"/>
+        </StackPanel>
+
+        <!-- Buttons -->
+        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto" Margin="0,8,0,0">
+            <Button Grid.Column="0" Classes="accent" Padding="18,8" FontWeight="SemiBold"
+                    Click="OnRun" IsEnabled="{Binding !IsRunning}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{x:Static root:Icons.Play}" Width="13" Height="13"/>
+                    <TextBlock Text="Extract"/>
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="1" Margin="8,0,0,0" Padding="14,8" Click="OnStop"
+                    IsEnabled="{Binding IsRunning}" Content="Stop"/>
+            <Button Grid.Column="2" Margin="16,0,0,0" Padding="14,8" Click="OnClearLog" Content="Clear Log"/>
+            <Button Grid.Column="4" Padding="14,8" Click="OnSaveLog" Content="Save Log"/>
+            <Button Grid.Column="5" Margin="8,0,0,0" Padding="14,8" Click="OnClose" Content="Close"/>
+        </Grid>
+
+        <!-- Activity log -->
+        <Border Background="{DynamicResource AppLogBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="6">
+            <ListBox Name="LogList" ItemsSource="{Binding Lines}" Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel/>
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.Styles>
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="Padding" Value="12,0"/>
+                        <Setter Property="MinHeight" Value="18"/>
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LogLine">
+                        <TextBlock Classes="logLine" Text="{Binding Text}" Foreground="{Binding Brush}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+    </DockPanel>
+</Window>

@@ -19,6 +19,12 @@ string? bhuTarget = null;
 string bhuDate = "";
 bool bhuFp = false;
 var bhuSet = new Dictionary<string, string?>();
+string? mergeRoot = null;
+string mergeDate = "2026-08-01";
+string? packDir = null;
+string packExts = "exe";
+string? extractDir = null;
+string sevenZip = @"C:\Program Files\7-Zip-Zstandard\7z.exe";
 for (int i = 0; i < args.Length; i++)
 {
     if (args[i] == "--settings" && i + 1 < args.Length)
@@ -46,6 +52,74 @@ for (int i = 0; i < args.Length; i++)
         bhuSet[args[++i]] = "";
     else if (args[i] == "--bhu-fp")
         bhuFp = true;
+    else if (args[i] == "--merge" && i + 1 < args.Length)
+        mergeRoot = args[++i];
+    else if (args[i] == "--merge-date" && i + 1 < args.Length)
+        mergeDate = args[++i];
+    else if (args[i] == "--pack" && i + 1 < args.Length)
+        packDir = args[++i];
+    else if (args[i] == "--pack-exts" && i + 1 < args.Length)
+        packExts = args[++i];
+    else if (args[i] == "--extract" && i + 1 < args.Length)
+        extractDir = args[++i];
+    else if (args[i] == "--sevenzip" && i + 1 < args.Length)
+        sevenZip = args[++i];
+}
+
+// ── Merge Datfiles mode (writes merged dats; byte-parity target) ─────────
+if (mergeRoot is not null)
+{
+    string category = Path.GetFileName(Path.TrimEndingDirectorySeparator(mergeRoot));
+    foreach (var job in MergeDatfiles.ScanForMerge(mergeRoot).Where(j => j.Action == "merge"))
+    {
+        var (merged, header, err) = MergeDatfiles.CollectGames(job.Path, job.Deeper);
+        if (err.Length > 0)
+        {
+            Console.WriteLine($"merge|{job.Name}|ERROR|{err}");
+            continue;
+        }
+        string datName = category + " - " + job.Name;
+        string outFn = DatWriter.MakeDatFilename(datName, mergeDate);
+        string outPath = Path.Combine(job.Path, outFn);
+        MergeDatfiles.WriteMergedDat(outPath, datName, merged, header, mergeDate);
+        int romTotal = merged.Sum(kv => kv.Value.Count);
+        Console.WriteLine($"merge|{job.Name}|{merged.Count}|{romTotal}|"
+            + Path.GetRelativePath(mergeRoot, outPath).Replace('\\', '/'));
+    }
+    return 0;
+}
+
+// ── ZIP Store Packer mode (packs in place, then lists zip entries) ───────
+if (packDir is not null)
+{
+    var exts = packExts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(e => "." + e.TrimStart('.').ToLowerInvariant()).ToList();
+    var cb = new ArchiveLog();
+    ZipStorePacker.Pack(packDir, exts, recurse: true, verify: true, skipExisting: true,
+                        cb, CancellationToken.None);
+    // Canonical listing of every produced zip
+    foreach (string zip in Directory.EnumerateFiles(packDir, "*.zip", SearchOption.AllDirectories)
+                 .OrderBy(x => x, StringComparer.Ordinal))
+    {
+        using var fs = new FileStream(zip, FileMode.Open, FileAccess.Read, FileShare.Read);
+        foreach (var e in ZipCentralDirectory.Read(fs))
+            Console.WriteLine($"zip|{Path.GetRelativePath(packDir, zip).Replace('\\', '/')}"
+                + $"|{e.FileName}|{e.UncompressedSize}|{e.Crc32:x8}|{e.Method}");
+    }
+    return 0;
+}
+
+// ── Recursive Archive Extractor mode (extract in place, then list tree) ──
+if (extractDir is not null)
+{
+    var cb = new ArchiveLog();
+    ArchiveExtractor.Extract(sevenZip, extractDir, dstRoot: null,
+        exts: [".zip", ".7z", ".rar"], afterMode: "keep", moveRoot: null,
+        recurse: true, autoNested: false, cb, CancellationToken.None);
+    foreach (string f in Directory.EnumerateFiles(extractDir, "*", SearchOption.AllDirectories)
+                 .OrderBy(x => x, StringComparer.Ordinal))
+        Console.WriteLine($"tree|{Path.GetRelativePath(extractDir, f).Replace('\\', '/')}|{new FileInfo(f).Length}");
+    return 0;
 }
 
 // ── Counter mode ─────────────────────────────────────────────────────────

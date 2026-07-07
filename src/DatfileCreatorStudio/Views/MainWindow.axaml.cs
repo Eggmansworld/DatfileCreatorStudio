@@ -91,7 +91,7 @@ public partial class MainWindow : Window
             ViewModel.IncrementalDatPath = path;
     }
 
-    private static bool IsInside(Control? control, Control target)
+    internal static bool IsInside(Control? control, Control target)
     {
         while (control is not null)
         {
@@ -142,6 +142,21 @@ public partial class MainWindow : Window
 
     private void OnOpenValidator(object? sender, RoutedEventArgs e) =>
         new ValidateDatfilesWindow { DataContext = new ValidateDatfilesViewModel() }.Show(this);
+
+    private void OnOpenMerge(object? sender, RoutedEventArgs e) =>
+        new MergeDatfilesWindow { DataContext = new MergeDatfilesViewModel() }.Show(this);
+
+    private void OnOpenExtractor(object? sender, RoutedEventArgs e) =>
+        new RecursiveArchiveExtractorWindow
+        {
+            DataContext = new RecursiveArchiveExtractorViewModel(ViewModel?.SevenZipPath ?? ""),
+        }.Show(this);
+
+    private void OnOpenPacker(object? sender, RoutedEventArgs e) =>
+        new ZipStorePackerWindow { DataContext = new ZipStorePackerViewModel() }.Show(this);
+
+    private void OnOpenReadOnly(object? sender, RoutedEventArgs e) =>
+        new RemoveReadOnlyWindow { DataContext = new RemoveReadOnlyViewModel() }.Show(this);
 
     private void OnPreviewClick(object? sender, RoutedEventArgs e)
     {
