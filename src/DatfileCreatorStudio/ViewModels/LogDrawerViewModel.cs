@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,21 +31,21 @@ public sealed record LogLine(string Text, IBrush Brush);
 /// </summary>
 public partial class LogDrawerViewModel : ViewModelBase
 {
-    private static readonly IBrush IdleBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
-    private static readonly IBrush RunningBrush = new SolidColorBrush(Color.Parse("#E8A33D"));
-    private static readonly IBrush SuccessBrush = new SolidColorBrush(Color.Parse("#3FB950"));
-    private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#E5484D"));
+    private static readonly IBrush IdleBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
+    private static readonly IBrush RunningBrush = new ImmutableSolidColorBrush(Color.Parse("#E8A33D"));
+    private static readonly IBrush SuccessBrush = new ImmutableSolidColorBrush(Color.Parse("#3FB950"));
+    private static readonly IBrush ErrorBrush = new ImmutableSolidColorBrush(Color.Parse("#E5484D"));
 
     private static readonly Dictionary<LogKind, IBrush> KindBrushes = new()
     {
-        [LogKind.Info] = new SolidColorBrush(Color.Parse("#8A8F98")),
-        [LogKind.Phase] = new SolidColorBrush(Color.Parse("#E8A33D")),
-        [LogKind.Folder] = new SolidColorBrush(Color.Parse("#4A9EDA")),
-        [LogKind.Subfolder] = new SolidColorBrush(Color.Parse("#B08050")),
-        [LogKind.Success] = new SolidColorBrush(Color.Parse("#3FB950")),
-        [LogKind.Carried] = new SolidColorBrush(Color.Parse("#8A8F98")),
-        [LogKind.Error] = new SolidColorBrush(Color.Parse("#E5484D")),
-        [LogKind.DatDone] = new SolidColorBrush(Color.Parse("#2EC96A")),
+        [LogKind.Info] = new ImmutableSolidColorBrush(Color.Parse("#8A8F98")),
+        [LogKind.Phase] = new ImmutableSolidColorBrush(Color.Parse("#E8A33D")),
+        [LogKind.Folder] = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA")),
+        [LogKind.Subfolder] = new ImmutableSolidColorBrush(Color.Parse("#B08050")),
+        [LogKind.Success] = new ImmutableSolidColorBrush(Color.Parse("#3FB950")),
+        [LogKind.Carried] = new ImmutableSolidColorBrush(Color.Parse("#8A8F98")),
+        [LogKind.Error] = new ImmutableSolidColorBrush(Color.Parse("#E5484D")),
+        [LogKind.DatDone] = new ImmutableSolidColorBrush(Color.Parse("#2EC96A")),
     };
 
     private readonly List<LogLine> _pending = [];

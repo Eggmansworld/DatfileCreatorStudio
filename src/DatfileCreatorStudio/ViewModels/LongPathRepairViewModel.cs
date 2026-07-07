@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text.RegularExpressions;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DatfileCreator.Core;
 
@@ -9,10 +10,10 @@ namespace DatfileCreatorStudio.ViewModels;
 /// <summary>One flagged path row in the Long Path Repair tool.</summary>
 public sealed partial class RepairItem : ObservableObject
 {
-    private static readonly IBrush CritBrush = new SolidColorBrush(Color.Parse("#E5484D"));
-    private static readonly IBrush WarnBrush = new SolidColorBrush(Color.Parse("#E8A33D"));
-    private static readonly IBrush PendingBrush = new SolidColorBrush(Color.Parse("#4A9EDA"));
-    private static readonly IBrush AppliedBrush = new SolidColorBrush(Color.Parse("#3FB950"));
+    private static readonly IBrush CritBrush = new ImmutableSolidColorBrush(Color.Parse("#E5484D"));
+    private static readonly IBrush WarnBrush = new ImmutableSolidColorBrush(Color.Parse("#E8A33D"));
+    private static readonly IBrush PendingBrush = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA"));
+    private static readonly IBrush AppliedBrush = new ImmutableSolidColorBrush(Color.Parse("#3FB950"));
 
     public required string OrigPath { get; init; }
     public required string Severity { get; init; } // "crit" | "warn"
@@ -110,7 +111,7 @@ public partial class LongPathRepairViewModel : ViewModelBase
     [ObservableProperty] private string _editStem = "";
     [ObservableProperty] private string _currentLenText = "";
     [ObservableProperty] private string _newLenText = "New: —";
-    [ObservableProperty] private IBrush _newLenBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
+    [ObservableProperty] private IBrush _newLenBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
     [ObservableProperty] private bool _hasSelection;
     [ObservableProperty] private bool _canApplyThis;
 
@@ -168,17 +169,17 @@ public partial class LongPathRepairViewModel : ViewModelBase
         if (n >= FolderAnalysis.CritLimit)
         {
             NewLenText = $"New: [{n}] CRITICAL";
-            NewLenBrush = new SolidColorBrush(Color.Parse("#E5484D"));
+            NewLenBrush = new ImmutableSolidColorBrush(Color.Parse("#E5484D"));
         }
         else if (n >= FolderAnalysis.WarnLimit)
         {
             NewLenText = $"New: [{n}] Warning";
-            NewLenBrush = new SolidColorBrush(Color.Parse("#E8A33D"));
+            NewLenBrush = new ImmutableSolidColorBrush(Color.Parse("#E8A33D"));
         }
         else
         {
             NewLenText = $"New: [{n}] OK ✓";
-            NewLenBrush = new SolidColorBrush(Color.Parse("#3FB950"));
+            NewLenBrush = new ImmutableSolidColorBrush(Color.Parse("#3FB950"));
         }
     }
 

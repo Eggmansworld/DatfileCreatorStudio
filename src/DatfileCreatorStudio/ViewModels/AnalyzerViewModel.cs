@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DatfileCreator.Core;
@@ -13,12 +14,12 @@ namespace DatfileCreatorStudio.ViewModels;
 /// </summary>
 public partial class AnalyzerViewModel : ViewModelBase
 {
-    private static readonly IBrush HeadBrush = new SolidColorBrush(Color.Parse("#4A9EDA"));
-    private static readonly IBrush GoodBrush = new SolidColorBrush(Color.Parse("#3FB950"));
-    private static readonly IBrush WarnBrush = new SolidColorBrush(Color.Parse("#E8A33D"));
-    private static readonly IBrush CritBrush = new SolidColorBrush(Color.Parse("#E5484D"));
-    private static readonly IBrush StatBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
-    private static readonly IBrush RecHighBrush = new SolidColorBrush(Color.Parse("#2EC96A"));
+    private static readonly IBrush HeadBrush = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA"));
+    private static readonly IBrush GoodBrush = new ImmutableSolidColorBrush(Color.Parse("#3FB950"));
+    private static readonly IBrush WarnBrush = new ImmutableSolidColorBrush(Color.Parse("#E8A33D"));
+    private static readonly IBrush CritBrush = new ImmutableSolidColorBrush(Color.Parse("#E5484D"));
+    private static readonly IBrush StatBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
+    private static readonly IBrush RecHighBrush = new ImmutableSolidColorBrush(Color.Parse("#2EC96A"));
 
     private readonly MainWindowViewModel _main;
     private CancellationTokenSource? _cancel;

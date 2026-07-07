@@ -53,7 +53,10 @@ public partial class ValidateDatfilesWindow : Window
             ViewModel.TargetPath = path;
     }
 
-    private async void OnRun(object? sender, RoutedEventArgs e)
+    private async void OnRun(object? sender, RoutedEventArgs e) => await RunValidationAsync();
+
+    /// <summary>The full Run flow (also invoked by the diagnostic auto-run hook).</summary>
+    internal async Task RunValidationAsync()
     {
         if (ViewModel is { } vm)
         {

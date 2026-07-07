@@ -16,3 +16,6 @@ TestCollection/
 
 # Portable config written next to a locally-run debug build
 DatfileCreatorStudio.config
+
+# Crash log written next to the exe
+*.crash.log

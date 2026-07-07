@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DatfileCreator.Core;
@@ -15,19 +16,19 @@ public abstract partial class ArchiveToolViewModel : ViewModelBase
 {
     private static readonly Dictionary<string, IBrush> TagBrushes = new()
     {
-        ["ok"] = new SolidColorBrush(Color.Parse("#3FB950")),
-        ["fail"] = new SolidColorBrush(Color.Parse("#E5484D")),
-        ["err"] = new SolidColorBrush(Color.Parse("#E5484D")),
-        ["warn"] = new SolidColorBrush(Color.Parse("#E8A33D")),
-        ["info"] = new SolidColorBrush(Color.Parse("#4A9EDA")),
-        ["hdr"] = new SolidColorBrush(Color.Parse("#4A9EDA")),
-        ["mute"] = new SolidColorBrush(Color.Parse("#8A8F98")),
-        ["skip"] = new SolidColorBrush(Color.Parse("#8A8F98")),
-        ["dim"] = new SolidColorBrush(Color.Parse("#8A8F98")),
-        ["nested"] = new SolidColorBrush(Color.Parse("#B07AD0")),
+        ["ok"] = new ImmutableSolidColorBrush(Color.Parse("#3FB950")),
+        ["fail"] = new ImmutableSolidColorBrush(Color.Parse("#E5484D")),
+        ["err"] = new ImmutableSolidColorBrush(Color.Parse("#E5484D")),
+        ["warn"] = new ImmutableSolidColorBrush(Color.Parse("#E8A33D")),
+        ["info"] = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA")),
+        ["hdr"] = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA")),
+        ["mute"] = new ImmutableSolidColorBrush(Color.Parse("#8A8F98")),
+        ["skip"] = new ImmutableSolidColorBrush(Color.Parse("#8A8F98")),
+        ["dim"] = new ImmutableSolidColorBrush(Color.Parse("#8A8F98")),
+        ["nested"] = new ImmutableSolidColorBrush(Color.Parse("#B07AD0")),
     };
 
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
+    private static readonly IBrush DefaultBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
 
     private CancellationTokenSource? _cancel;
     private readonly BatchedLog _log = new();

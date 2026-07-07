@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 
 namespace DatfileCreatorStudio.ViewModels;
@@ -17,7 +18,7 @@ public sealed class BatchedLog
     /// <summary>Cap on displayed lines; the full log is always kept for saving.</summary>
     private const int MaxVisible = 20000;
 
-    private static readonly IBrush TrimBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
+    private static readonly IBrush TrimBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
 
     private readonly List<LogLine> _pending = [];
     private readonly List<string> _all = [];

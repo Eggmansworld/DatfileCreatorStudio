@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DatfileCreator.Core;
@@ -27,10 +28,10 @@ public partial class BhuFieldRow : ObservableObject
 /// </summary>
 public partial class BulkHeaderUpdaterViewModel : ViewModelBase
 {
-    private static readonly IBrush OkBrush = new SolidColorBrush(Color.Parse("#3FB950"));
-    private static readonly IBrush WarnBrush = new SolidColorBrush(Color.Parse("#E8A33D"));
-    private static readonly IBrush ErrBrush = new SolidColorBrush(Color.Parse("#E5484D"));
-    private static readonly IBrush DimBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
+    private static readonly IBrush OkBrush = new ImmutableSolidColorBrush(Color.Parse("#3FB950"));
+    private static readonly IBrush WarnBrush = new ImmutableSolidColorBrush(Color.Parse("#E8A33D"));
+    private static readonly IBrush ErrBrush = new ImmutableSolidColorBrush(Color.Parse("#E5484D"));
+    private static readonly IBrush DimBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
 
     private CancellationTokenSource? _cancel;
     private readonly BatchedLog _log = new();

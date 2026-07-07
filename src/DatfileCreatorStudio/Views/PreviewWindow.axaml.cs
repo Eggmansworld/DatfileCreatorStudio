@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Platform.Storage;
 using DatfileCreatorStudio.ViewModels;
 
@@ -15,10 +16,10 @@ public partial class PreviewWindow : Window
     // thousands of inline runs make the text layout crawl on very large dats
     private const int HighlightLimit = 1_000_000;
 
-    private static readonly IBrush PunctBrush = new SolidColorBrush(Color.Parse("#7A7F87"));
-    private static readonly IBrush TagBrush = new SolidColorBrush(Color.Parse("#4A9EDA"));
-    private static readonly IBrush AttrNameBrush = new SolidColorBrush(Color.Parse("#E8A33D"));
-    private static readonly IBrush AttrValueBrush = new SolidColorBrush(Color.Parse("#3FB950"));
+    private static readonly IBrush PunctBrush = new ImmutableSolidColorBrush(Color.Parse("#7A7F87"));
+    private static readonly IBrush TagBrush = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA"));
+    private static readonly IBrush AttrNameBrush = new ImmutableSolidColorBrush(Color.Parse("#E8A33D"));
+    private static readonly IBrush AttrValueBrush = new ImmutableSolidColorBrush(Color.Parse("#3FB950"));
 
     private PreviewWindowViewModel? _viewModel;
 

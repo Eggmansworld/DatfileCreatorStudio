@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DatfileCreator.Core;
@@ -20,11 +21,11 @@ public partial class PreflightDialogViewModel : ViewModelBase
 {
     private static readonly Dictionary<PreflightTag, IBrush> TagBrushes = new()
     {
-        [PreflightTag.Plain] = new SolidColorBrush(Color.Parse("#8A8F98")),
-        [PreflightTag.Ok] = new SolidColorBrush(Color.Parse("#3FB950")),
-        [PreflightTag.Warn] = new SolidColorBrush(Color.Parse("#E8A33D")),
-        [PreflightTag.Err] = new SolidColorBrush(Color.Parse("#E5484D")),
-        [PreflightTag.Dim] = new SolidColorBrush(Color.Parse("#7A7F87")),
+        [PreflightTag.Plain] = new ImmutableSolidColorBrush(Color.Parse("#8A8F98")),
+        [PreflightTag.Ok] = new ImmutableSolidColorBrush(Color.Parse("#3FB950")),
+        [PreflightTag.Warn] = new ImmutableSolidColorBrush(Color.Parse("#E8A33D")),
+        [PreflightTag.Err] = new ImmutableSolidColorBrush(Color.Parse("#E5484D")),
+        [PreflightTag.Dim] = new ImmutableSolidColorBrush(Color.Parse("#7A7F87")),
     };
 
     private readonly DatSettings _settings;

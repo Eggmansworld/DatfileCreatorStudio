@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Text;
 using Avalonia.Media;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using DatfileCreator.Core;
@@ -15,9 +16,9 @@ public sealed record DatCountResult(
 /// <summary>One display row: a folder header or a dat entry.</summary>
 public sealed class CounterRow
 {
-    private static readonly IBrush FolderBrush = new SolidColorBrush(Color.Parse("#4A9EDA"));
-    private static readonly IBrush ErrorBrush = new SolidColorBrush(Color.Parse("#E5484D"));
-    private static readonly IBrush DatBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
+    private static readonly IBrush FolderBrush = new ImmutableSolidColorBrush(Color.Parse("#4A9EDA"));
+    private static readonly IBrush ErrorBrush = new ImmutableSolidColorBrush(Color.Parse("#E5484D"));
+    private static readonly IBrush DatBrush = new ImmutableSolidColorBrush(Color.Parse("#8A8F98"));
 
     public required bool IsFolder { get; init; }
     public DatCountResult? Result { get; init; }
