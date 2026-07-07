@@ -33,10 +33,10 @@ public partial class BulkHeaderUpdaterViewModel : ViewModelBase
     private static readonly IBrush DimBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
 
     private CancellationTokenSource? _cancel;
-    private readonly List<string> _logLines = [];
+    private readonly BatchedLog _log = new();
 
     public ObservableCollection<BhuFieldRow> Fields { get; } = [];
-    public ObservableCollection<LogLine> Lines { get; } = [];
+    public ObservableCollection<LogLine> Lines => _log.Lines;
 
     public BulkHeaderUpdaterViewModel()
     {
@@ -50,21 +50,13 @@ public partial class BulkHeaderUpdaterViewModel : ViewModelBase
     [ObservableProperty] private bool _addForcePacking;
     [ObservableProperty] private bool _isRunning;
 
-    public IReadOnlyList<string> LogLinesSnapshot => _logLines;
+    public IReadOnlyList<string> LogLinesSnapshot => _log.Snapshot;
 
-    private void Post(string text, IBrush brush)
-    {
-        Dispatcher.UIThread.Post(() => Lines.Add(new LogLine(text, brush)));
-        _logLines.Add(text);
-    }
+    private void Post(string text, IBrush brush) => _log.Post(text, brush);
 
     public void Stop() => _cancel?.Cancel();
 
-    public void ClearLog()
-    {
-        Lines.Clear();
-        _logLines.Clear();
-    }
+    public void ClearLog() => _log.Clear();
 
     public async Task RunAsync()
     {
@@ -150,6 +142,10 @@ public partial class BulkHeaderUpdaterViewModel : ViewModelBase
                 Post($"=== COMPLETE — Success: {ok}  Warnings: {warn}  Errors: {err} ===",
                      err == 0 ? OkBrush : WarnBrush);
             }, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Post("[ERROR] Run failed: " + ex.Message, ErrBrush);
         }
         finally
         {

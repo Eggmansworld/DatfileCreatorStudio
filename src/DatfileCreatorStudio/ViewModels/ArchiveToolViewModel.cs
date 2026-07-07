@@ -30,23 +30,19 @@ public abstract partial class ArchiveToolViewModel : ViewModelBase
     private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
 
     private CancellationTokenSource? _cancel;
-    private readonly List<string> _logLines = [];
+    private readonly BatchedLog _log = new();
 
-    public ObservableCollection<LogLine> Lines { get; } = [];
+    public ObservableCollection<LogLine> Lines => _log.Lines;
 
     [ObservableProperty] private bool _isRunning;
     [ObservableProperty] private string _statusText = "Ready.";
     [ObservableProperty] private double _progress;
 
-    public IReadOnlyList<string> LogSnapshot => _logLines;
+    public IReadOnlyList<string> LogSnapshot => _log.Snapshot;
 
     public void Stop() => _cancel?.Cancel();
 
-    public void ClearLog()
-    {
-        Lines.Clear();
-        _logLines.Clear();
-    }
+    public void ClearLog() => _log.Clear();
 
     /// <summary>Build an ArchiveLog whose callbacks marshal onto the UI thread.</summary>
     protected ArchiveLog MakeLog() => new()
@@ -65,11 +61,7 @@ public abstract partial class ArchiveToolViewModel : ViewModelBase
         if (count > 0 && pieces[^1].Length == 0)
             count--; // drop the segment after a trailing newline
         for (int i = 0; i < count; i++)
-        {
-            string text = pieces[i];
-            Dispatcher.UIThread.Post(() => Lines.Add(new LogLine(text, brush)));
-            _logLines.Add(text);
-        }
+            _log.Post(pieces[i], brush);
     }
 
     /// <summary>Run a background work delegate with run/stop state management.</summary>

@@ -20,29 +20,21 @@ public partial class ValidateDatfilesViewModel : ViewModelBase
     private static readonly IBrush DimBrush = new SolidColorBrush(Color.Parse("#8A8F98"));
 
     private CancellationTokenSource? _cancel;
-    private readonly List<string> _logLines = [];
+    private readonly BatchedLog _log = new();
 
-    public ObservableCollection<LogLine> Lines { get; } = [];
+    public ObservableCollection<LogLine> Lines => _log.Lines;
 
     [ObservableProperty] private string _targetPath = "";
     [ObservableProperty] private bool _isRunning;
     [ObservableProperty] private string _statusText = "Select a dat file or folder, then click Validate.";
 
-    public IReadOnlyList<string> LogLinesSnapshot => _logLines;
+    public IReadOnlyList<string> LogLinesSnapshot => _log.Snapshot;
 
-    private void Post(string text, IBrush brush)
-    {
-        Dispatcher.UIThread.Post(() => Lines.Add(new LogLine(text, brush)));
-        _logLines.Add(text);
-    }
+    private void Post(string text, IBrush brush) => _log.Post(text, brush);
 
     public void Stop() => _cancel?.Cancel();
 
-    public void ClearLog()
-    {
-        Lines.Clear();
-        _logLines.Clear();
-    }
+    public void ClearLog() => _log.Clear();
 
     public async Task RunAsync()
     {
@@ -107,7 +99,7 @@ public partial class ValidateDatfilesViewModel : ViewModelBase
                             Post($"  ✖  {issues} issue{(issues != 1 ? "s" : "")} found in "
                                  + $"{roms} ROM entr{(roms == 1 ? "y" : "ies")}", WarnBrush);
                     }
-                    catch (IOException exc)
+                    catch (Exception exc)
                     {
                         Post("  [ERROR] Cannot read file: " + exc.Message, ErrBrush);
                         totalIssues++;
@@ -123,6 +115,12 @@ public partial class ValidateDatfilesViewModel : ViewModelBase
                 Dispatcher.UIThread.Post(() =>
                     StatusText = $"Done — {totalIssues} issue(s) across {totalFiles} file(s)");
             }, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            // A tool bug must never crash the whole app
+            Post("[ERROR] Validation failed: " + ex.Message, ErrBrush);
+            StatusText = "Validation failed.";
         }
         finally
         {
