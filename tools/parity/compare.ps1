@@ -135,6 +135,129 @@ foreach ($run in $runs) {
     Write-Host ("{0,-28} {1}  {2}" -f $name, $status, $detail) -ForegroundColor $colour
 }
 
+# ══ Incremental update scenarios ══════════════════════════════════════════
+# Baseline dats are generated from the ORIGINAL collection, the collection is
+# mutated (add/remove/change items), then both engines run an incremental
+# update against per-side copies of the baseline dats. Compared: the updated
+# dats, the dat-source dir state (.old retirement), and the carried/hashed
+# summary line.
+Write-Host ""
+Write-Host "Incremental update scenarios:" -ForegroundColor Cyan
+
+python (Join-Path $PSScriptRoot "make_incr_mutation.py")
+if ($LASTEXITCODE -ne 0) { throw "mutation build failed" }
+$mutated = Join-Path $parityOut "incr\TestCollection"
+
+$incrRuns = @(
+    @{ name = "incr_zipped";          dat_type = "zipped"; incr = @{} }
+    @{ name = "incr_mixed";           dat_type = "mixed";  incr = @{} }
+    @{ name = "incr_blake3_backfill"; dat_type = "zipped"; incr = @{ include_blake3 = $true } }
+)
+
+foreach ($run in $incrRuns) {
+    $name = $run.name
+
+    # Baseline dats from the original collection (C# engine; both engines are
+    # already proven byte-identical on this path above)
+    $baseline = Join-Path $runsDir "$name\baseline"
+    New-Item -ItemType Directory -Force $baseline | Out-Null
+    $baseSettings = $common.Clone()
+    $baseSettings["dat_type"] = $run.dat_type
+    $baseSettings["gen_mode"] = "per_root"
+    $baseSettings["structure"] = "opt2"
+    $baseSettings["dat_format"] = "modern"
+    $baseSettings["output_root"] = $baseline
+    $basePath = Join-Path $settingsDir "$name-baseline.json"
+    $baseSettings | ConvertTo-Json | Set-Content -Path $basePath -Encoding UTF8
+    & $runnerExe --settings $basePath | Out-Null
+
+    $summaries = @{}
+    foreach ($side in @("py", "cs")) {
+        # Per-side copy of the baseline dats (retirement renames them)
+        $sideDats = Join-Path $runsDir "$name\$side-dats"
+        Copy-Item -Recurse -Force $baseline $sideDats
+        $sideOut = Join-Path $runsDir "$name\$side"
+        New-Item -ItemType Directory -Force $sideOut | Out-Null
+
+        $settings = $common.Clone()
+        $settings["input_root"] = $mutated
+        $settings["output_root"] = $sideOut
+        $settings["dat_type"] = $run.dat_type
+        $settings["gen_mode"] = "per_root"
+        $settings["structure"] = "opt2"
+        $settings["dat_format"] = "modern"
+        $settings["date"] = "2026-07-08"
+        $settings["version"] = "2026-07-08-incr"
+        $settings["incremental"] = $true
+        $settings["incremental_dat_path"] = Join-Path $sideDats "TestCollection"
+        $settings["retire_old_dats"] = $true
+        foreach ($k in $run.incr.Keys) { $settings[$k] = $run.incr[$k] }
+        $settingsPath = Join-Path $settingsDir "$name-$side.json"
+        $settings | ConvertTo-Json | Set-Content -Path $settingsPath -Encoding UTF8
+
+        if ($side -eq "py") {
+            $log = python (Join-Path $PSScriptRoot "run_python.py") --settings $settingsPath 2>&1
+        } else {
+            $log = & $runnerExe --settings $settingsPath 2>&1
+        }
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[$name/$side] engine reported errors:" -ForegroundColor Yellow
+            $log | Select-Object -Last 8 | ForEach-Object { Write-Host "   $_" }
+        }
+        $summaryLine = @($log | Where-Object { $_ -match "Incremental summary:" })
+        $summaries[$side] = if ($summaryLine.Count -gt 0) {
+            ($summaryLine[0] -replace ".*Incremental summary:", "").Trim() } else { "(none)" }
+    }
+
+    # ── Compare updated dats + retired dat-source state + summary ────────
+    $pyOut = Join-Path $runsDir "$name\py"
+    $csOut = Join-Path $runsDir "$name\cs"
+    $status = "PASS"
+    $detail = ""
+
+    $pyFiles = @(Get-ChildItem -Recurse -File $pyOut | ForEach-Object {
+        $_.FullName.Substring($pyOut.Length + 1) })
+    $csFiles = @(Get-ChildItem -Recurse -File $csOut | ForEach-Object {
+        $_.FullName.Substring($csOut.Length + 1) })
+    $missing = @(Compare-Object $pyFiles $csFiles)
+    if ($missing.Count -gt 0) {
+        $status = "FAIL"; $detail = "output file lists differ"
+    } else {
+        foreach ($rel in $pyFiles) {
+            $a = Get-FileHash -Algorithm SHA256 (Join-Path $pyOut $rel)
+            $b = Get-FileHash -Algorithm SHA256 (Join-Path $csOut $rel)
+            if ($a.Hash -ne $b.Hash) { $status = "FAIL"; $detail = "byte mismatch: $rel"; break }
+        }
+    }
+
+    if ($status -eq "PASS") {
+        # Dat-source dirs must end in the same state (.old renames)
+        $pyDatState = @(Get-ChildItem -Recurse -File (Join-Path $runsDir "$name\py-dats") |
+            ForEach-Object { $_.Name }) | Sort-Object
+        $csDatState = @(Get-ChildItem -Recurse -File (Join-Path $runsDir "$name\cs-dats") |
+            ForEach-Object { $_.Name }) | Sort-Object
+        if (@(Compare-Object $pyDatState $csDatState).Count -gt 0) {
+            $status = "FAIL"; $detail = "retired dat-source states differ"
+        }
+    }
+
+    if ($status -eq "PASS") {
+        if ($summaries["py"] -ne $summaries["cs"]) {
+            $status = "FAIL"
+            $detail = "summary mismatch: py=[$($summaries['py'])] cs=[$($summaries['cs'])]"
+        } elseif ($summaries["py"] -eq "(none)") {
+            $status = "FAIL"; $detail = "no incremental summary reported"
+        } else {
+            $oldCount = @(Get-ChildItem -Recurse -File (Join-Path $runsDir "$name\py-dats") -Filter "*.old").Count
+            $detail = "$($pyFiles.Count) dat(s), $($summaries['py']), $oldCount retired"
+        }
+    }
+
+    $results += [pscustomobject]@{ Run = $name; Status = $status; Detail = $detail }
+    $colour = if ($status -eq "PASS") { "Green" } else { "Red" }
+    Write-Host ("{0,-28} {1}  {2}" -f $name, $status, $detail) -ForegroundColor $colour
+}
+
 Write-Host ""
 $failed = @($results | Where-Object Status -ne "PASS")
 if ($failed.Count -eq 0) {

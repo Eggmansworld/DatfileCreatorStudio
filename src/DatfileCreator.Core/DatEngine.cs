@@ -22,6 +22,8 @@ public sealed class EngineCallbacks
     public Action<int>? Progress { get; init; }
     /// <summary>Item hashed OK: (basename, diagnostic detail or "").</summary>
     public Action<string, string>? ItemHashed { get; init; }
+    /// <summary>Item carried forward from the existing dat without rehashing (incremental).</summary>
+    public Action<string>? ItemCarried { get; init; }
     /// <summary>Item failed: (basename, error detail).</summary>
     public Action<string, string>? ItemError { get; init; }
     /// <summary>A dat file was written: (path, running count).</summary>
@@ -91,9 +93,6 @@ public static class DatEngine
                 + " Mbit/s  (" + (s.NetCapMbps == 0 ? "auto-detected" : "manual") + ")" + capSuffix);
         else
             cb.Status?.Invoke("Network cap: unlimited  (no NIC speed detected)" + capSuffix);
-
-        if (s.Incremental)
-            cb.Status?.Invoke("Incremental update arrives in Session 3 — performing a full hash run.");
 
         // ── Phase 1: discovery ───────────────────────────────────────────
         cb.Status?.Invoke("Phase 1 of 2 — Discovering folders and files... (please wait)");
@@ -257,6 +256,152 @@ public static class DatEngine
 
         int doneItems = 0;
         int writtenDats = 0;
+        int totalCarried = 0;
+        int totalHashed = 0;
+
+        // ── Build incremental index map (if incremental mode) ────────────
+        // Maps outDir → (gameIndex, existingDatPath) for each job.
+        var incrIndexMap = new Dictionary<string, (DatGameIndex Index, string DatPath)>(StringComparer.Ordinal);
+        if (s.Incremental && s.IncrementalDatPath.Length > 0)
+        {
+            string datSrc = Path.GetFullPath(s.IncrementalDatPath);
+
+            // Job lookup tables — needed for both file and folder modes
+            var jobFolderPathMap = new Dictionary<string, Job>(StringComparer.Ordinal);
+            var jobNameMap = new Dictionary<string, Job>(StringComparer.Ordinal);
+            foreach (var job in jobs)
+            {
+                jobFolderPathMap[job.FolderPath.ToLowerInvariant()] = job;
+                string relFp;
+                try
+                {
+                    relFp = Path.GetRelativePath(inputRoot, job.FolderPath);
+                }
+                catch
+                {
+                    relFp = ".";
+                }
+                string compound = relFp is "." or ""
+                    ? Path.GetFileName(Path.TrimEndingDirectorySeparator(job.FolderPath))
+                    : string.Join(" - ", relFp.Replace('\\', '/').Split('/'));
+                jobNameMap[DatWriter.MakeDatName(compound, inputRoot, s)] = job;
+            }
+
+            // Match a dat's <name> header to a job: exact make_dat_name()
+            // match first, then each " - " part (right to left) tried as a
+            // direct subfolder of the input root — matches even when the
+            // parent name or root depth differ between runs
+            Job? MatchDatToJob(string datNameHdr)
+            {
+                if (datNameHdr.Length == 0)
+                    return null;
+                if (jobNameMap.TryGetValue(datNameHdr, out var exact))
+                    return exact;
+                var parts = datNameHdr.Split(" - ").Select(p => p.Trim()).ToArray();
+                foreach (string p in parts.Reverse())
+                {
+                    if (p.Length == 0)
+                        continue;
+                    string cand = Path.Combine(inputRoot, p).ToLowerInvariant();
+                    if (jobFolderPathMap.TryGetValue(cand, out var byPath))
+                        return byPath;
+                }
+                return null;
+            }
+
+            if (File.Exists(datSrc))
+            {
+                var (gi, hd, errS) = IncrementalUpdate.ReadDatIndex(datSrc);
+                if (errS.Length > 0)
+                {
+                    errors.Add("Could not read dat: " + datSrc + " :: " + errS);
+                }
+                else if (jobs.Count > 0)
+                {
+                    var match = MatchDatToJob(hd.GetValueOrDefault("name", ""));
+                    if (match is not null)
+                    {
+                        incrIndexMap[match.OutDir] = (gi, datSrc);
+                    }
+                    else
+                    {
+                        // No specific job matched — assume the dat covers the
+                        // entire input root. Carry-forward is keyed by
+                        // filename, so only matching items are carried.
+                        foreach (var job in jobs)
+                            incrIndexMap[job.OutDir] = (gi, datSrc);
+                    }
+                }
+            }
+            else if (Directory.Exists(datSrc))
+            {
+                void WalkDats(string dir)
+                {
+                    string[] files;
+                    string[] subdirs;
+                    try
+                    {
+                        files = Directory.GetFiles(dir);
+                        subdirs = Directory.GetDirectories(dir);
+                    }
+                    catch
+                    {
+                        return;
+                    }
+                    foreach (string full in files.OrderBy(f => Path.GetFileName(f), StringComparer.Ordinal))
+                    {
+                        string fn = Path.GetFileName(full);
+                        if (!fn.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                            && !fn.EndsWith(".dat", StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        var (gi, hd, errS) = IncrementalUpdate.ReadDatIndex(full);
+                        if (errS.Length > 0)
+                        {
+                            errors.Add("Could not read dat: " + full + " :: " + errS);
+                            continue;
+                        }
+
+                        bool matched = false;
+                        string relDir;
+                        try
+                        {
+                            relDir = Path.GetRelativePath(datSrc, dir);
+                        }
+                        catch
+                        {
+                            relDir = ".";
+                        }
+                        if (relDir.Length > 0 && relDir != ".")
+                        {
+                            string key = Path.Combine(inputRoot, relDir).ToLowerInvariant();
+                            if (jobFolderPathMap.TryGetValue(key, out var byPath))
+                            {
+                                incrIndexMap[byPath.OutDir] = (gi, full);
+                                matched = true;
+                            }
+                        }
+                        if (!matched)
+                        {
+                            var match = MatchDatToJob(hd.GetValueOrDefault("name", ""));
+                            if (match is not null)
+                            {
+                                incrIndexMap[match.OutDir] = (gi, full);
+                            }
+                            else
+                            {
+                                // Likely covers the entire input root — map to
+                                // every unclaimed job
+                                foreach (var job in jobs.Where(j => !incrIndexMap.ContainsKey(j.OutDir)))
+                                    incrIndexMap[job.OutDir] = (gi, full);
+                            }
+                        }
+                    }
+                    foreach (string sub in subdirs)
+                        WalkDats(sub);
+                }
+                WalkDats(datSrc);
+            }
+        }
 
         // ── Process each job ─────────────────────────────────────────────
         foreach (var job in jobs)
@@ -296,13 +441,49 @@ public static class DatEngine
                 continue;
             }
 
+            // ── Incremental: look up existing dat index for this job ─────
+            DatGameIndex? jobGameIndex = null;
+            string jobExistingDat = "";
+            if (s.Incremental)
+            {
+                if (incrIndexMap.TryGetValue(job.OutDir, out var incrPair))
+                {
+                    jobGameIndex = incrPair.Index;
+                    jobExistingDat = incrPair.DatPath;
+                }
+                else
+                {
+                    cb.Status?.Invoke($"No existing dat found for {folderName} — full hash.");
+                }
+            }
+
             // ── Hash / analyze all items ─────────────────────────────────
             var data = new DatData();
             bool incomplete = false;
+            bool incrementalUsed = false;
+
+            if (s.Incremental && jobGameIndex is not null && jobGameIndex.Games.Count > 0)
+            {
+                // Incremental: carry forward unchanged items, hash only new
+                // or changed ones — single-threaded in tree order, exactly
+                // like the suite (items are NOT re-sorted in this mode)
+                var (incrData, incrDone, jobCarried, jobHashed, jobErrs) =
+                    IncrementalUpdate.BuildIncrementalData(items, jobGameIndex, s,
+                                                           hardStop, cb, doneItems, throttle);
+                data = incrData;
+                doneItems = incrDone;
+                errors.AddRange(jobErrs);
+                totalCarried += jobCarried;
+                totalHashed += jobHashed;
+                if (hardStop.IsCancellationRequested)
+                    incomplete = true;
+                incrementalUsed = true;
+            }
 
             // Sort items by (parent dir, basename) so items from the same
-            // subfolder are processed consecutively
-            items.Sort((a, b) =>
+            // subfolder are processed consecutively (full-hash mode only)
+            if (!incrementalUsed)
+                items.Sort((a, b) =>
             {
                 int c = string.CompareOrdinal(
                     (Path.GetDirectoryName(a) ?? "").ToLowerInvariant(),
@@ -393,7 +574,11 @@ public static class DatEngine
                 }
             }
 
-            if (maxWorkers == 1)
+            if (incrementalUsed)
+            {
+                // Hashing already done by the incremental builder above
+            }
+            else if (maxWorkers == 1)
             {
                 foreach (string item in items)
                 {
@@ -448,6 +633,17 @@ public static class DatEngine
             {
                 writtenDats++;
                 cb.DatWritten?.Invoke(datPath, writtenDats);
+
+                // Incremental: optionally rename the superseded dat to .old
+                if (s.Incremental && s.RetireOldDats
+                    && jobExistingDat.Length > 0 && File.Exists(jobExistingDat))
+                {
+                    var (oldFinal, renameErr) = IncrementalUpdate.RetireOldDat(jobExistingDat);
+                    if (renameErr.Length > 0)
+                        errors.Add(renameErr);
+                    else
+                        cb.Status?.Invoke($"Retired: {Path.GetFileName(oldFinal)}");
+                }
             }
 
             // Store for the preview window (only complete jobs with data)
@@ -475,6 +671,9 @@ public static class DatEngine
         }
 
         bool ok = !hardStop.IsCancellationRequested && !softStop.IsCancellationRequested;
+        if (s.Incremental && totalCarried + totalHashed > 0)
+            cb.Status?.Invoke($"Incremental summary: {totalCarried} carried, "
+                              + $"{totalHashed} hashed, {doneItems} total items.");
         cb.Done?.Invoke(ok, errors, doneItems, totalItems, writtenDats, sw.Elapsed.TotalSeconds);
     }
 

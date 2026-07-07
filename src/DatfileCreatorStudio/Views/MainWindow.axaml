@@ -68,7 +68,7 @@
         </Border>
 
         <!-- ── Main content ──────────────────────────────────────────── -->
-        <Grid Margin="16,12,16,12" RowDefinitions="Auto,12,*,12,Auto">
+        <Grid Margin="16,12,16,12" RowDefinitions="Auto,12,*,12,Auto,10,Auto">
 
             <!-- Paths -->
             <Border Grid.Row="0" Classes="card">
@@ -265,8 +265,33 @@
                 </Border>
             </Grid>
 
+            <!-- Incremental update -->
+            <Border Grid.Row="4" Classes="card" Padding="14,10">
+                <Grid ColumnDefinitions="Auto,20,Auto,8,*,Auto,Auto,20,Auto">
+                    <CheckBox Grid.Column="0" Classes="opt" Content="Incremental update — skip already-hashed files"
+                              IsChecked="{Binding Incremental}"
+                              ToolTip.Tip="Update existing datfiles by hashing only new or changed content, carrying hash data forward for everything unchanged. Zipped items match by filename + size + CRC (read from the zip central directory — milliseconds per zip); Mixed items match by filename + size. A Pre-flight Check runs before the update starts."/>
+                    <TextBlock Grid.Column="2" Classes="fieldLabel" Text="Existing dat file or folder"
+                               ToolTip.Tip="The dat you want to update, or the folder containing your dats for bulk updates. Drag &amp; drop works here."/>
+                    <TextBox Grid.Column="4" Name="IncrDatBox" Text="{Binding IncrementalDatPath}"
+                             IsEnabled="{Binding Incremental}" FontSize="12"
+                             Watermark="Existing dat file, or folder of dats (mirrors the input structure)"/>
+                    <Button Grid.Column="5" Margin="8,0,0,0" Click="OnBrowseIncrFile"
+                            IsEnabled="{Binding Incremental}" ToolTip.Tip="Browse for a single dat file">
+                        <PathIcon Data="{x:Static root:Icons.FileDocument}" Width="14" Height="14"/>
+                    </Button>
+                    <Button Grid.Column="6" Margin="4,0,0,0" Click="OnBrowseIncrFolder"
+                            IsEnabled="{Binding Incremental}" ToolTip.Tip="Browse for a folder of dats">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+                    <CheckBox Grid.Column="8" Classes="opt" Content="Rename superseded dat to .old"
+                              IsChecked="{Binding RetireOldDats}" IsEnabled="{Binding Incremental}"
+                              ToolTip.Tip="After a successful update, rename the original datfile to .xml.old — invalidating it in RomVault while preserving it for reference. Never more than one active .xml dat per folder."/>
+                </Grid>
+            </Border>
+
             <!-- Footer note -->
-            <TextBlock Grid.Row="4" Classes="subtle" FontSize="11"
+            <TextBlock Grid.Row="6" Classes="subtle" FontSize="11"
                        Text="Fully portable: all settings live in DatfileCreatorStudio.config next to the exe. Output mirrors the input folder structure — RomVault uses DatRoot folder structure to define collection boundaries."/>
         </Grid>
     </DockPanel>

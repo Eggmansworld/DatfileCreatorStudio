@@ -62,6 +62,9 @@ public partial class MainWindowViewModel : ViewModelBase
         _multithread = d.Multithread;
         _threads = Math.Clamp(d.Threads, 1, 8);
         _netCapText = d.NetCapMbps > 0 ? d.NetCapMbps.ToString() : "0";
+        _incremental = d.Incremental;
+        _incrementalDatPath = d.IncrementalDatPath;
+        _retireOldDats = d.RetireOldDats;
         _selectedTheme = settings.Config.Theme;
 
         Drawer.ReportInfo($"Config: {SettingsService.ConfigPath}");
@@ -143,6 +146,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Net cap in Mbit/s as text; "0" or invalid = auto (85% of NIC speed).</summary>
     [ObservableProperty] private string _netCapText;
+
+    // ── Incremental update ───────────────────────────────────────────────
+
+    [ObservableProperty] private bool _incremental;
+    [ObservableProperty] private string _incrementalDatPath;
+    [ObservableProperty] private bool _retireOldDats;
+
+    /// <summary>
+    /// Set by the view: shows the Pre-flight Check dialog and returns the
+    /// user's decision (null = cancelled).
+    /// </summary>
+    public Func<DatSettings, Task<PreflightOutcome?>>? PreflightHandler { get; set; }
 
     // ── Preview ──────────────────────────────────────────────────────────
 
@@ -226,6 +241,9 @@ public partial class MainWindowViewModel : ViewModelBase
         d.Multithread = Multithread;
         d.Threads = Math.Clamp(Threads, 1, 8);
         d.NetCapMbps = int.TryParse(NetCapText.Trim(), out int cap) && cap > 0 ? cap : 0;
+        d.Incremental = Incremental;
+        d.IncrementalDatPath = IncrementalDatPath.Trim();
+        d.RetireOldDats = RetireOldDats;
         return d;
     }
 
@@ -258,6 +276,39 @@ public partial class MainWindowViewModel : ViewModelBase
         // Settings are written automatically when Start is pressed (suite behaviour)
         _settings.Save();
 
+        // Run on a snapshot so mid-run UI edits can't affect the engine
+        var runSettings = s.Clone();
+
+        // Incremental mode: pre-flight check before anything starts
+        if (runSettings.Incremental)
+        {
+            if (runSettings.IncrementalDatPath.Length == 0)
+            {
+                Drawer.ReportError("Incremental update is enabled but no existing dat file or folder is set.");
+                return;
+            }
+            if (PreflightHandler is not null)
+            {
+                var outcome = await PreflightHandler(runSettings);
+                if (outcome is null)
+                    return; // user cancelled
+                if (outcome.NewVersion.Length > 0)
+                {
+                    runSettings.Version = outcome.NewVersion;
+                    Version = outcome.NewVersion;
+                }
+                if (outcome.Decision == PreflightDecision.FullRehash)
+                {
+                    runSettings.Incremental = false;
+                    Drawer.ReportInfo("Full rehash mode (incremental disabled for this run).");
+                }
+                else
+                {
+                    Drawer.ReportInfo("Incremental update started.");
+                }
+            }
+        }
+
         _softStop = new CancellationTokenSource();
         _hardStop = new CancellationTokenSource();
         IsRunning = true;
@@ -265,8 +316,10 @@ public partial class MainWindowViewModel : ViewModelBase
         HasPreview = false;
         var previews = new List<PreviewEntry>();
 
-        string summary = $"{(s.IsMixed ? "Mixed" : "Zipped")} | {s.GenMode} | {s.Structure} | "
-                       + $"{s.DatFormat} | in: {s.InputRoot} | out: {s.OutputRoot}";
+        string summary = $"{(runSettings.IsMixed ? "Mixed" : "Zipped")} | {runSettings.GenMode} | "
+                       + $"{runSettings.Structure} | {runSettings.DatFormat}"
+                       + (runSettings.Incremental ? " | incremental" : "")
+                       + $" | in: {runSettings.InputRoot} | out: {runSettings.OutputRoot}";
         Drawer.OnRunStarted(summary);
 
         bool ok = false;
@@ -291,6 +344,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 Dispatcher.UIThread.Post(() => Drawer.OnProgress(done)),
             ItemHashed = (name, detail) =>
                 Drawer.Append(LogKind.Success, "   ✓ " + name + detail),
+            ItemCarried = name =>
+                Drawer.Append(LogKind.Carried, "   · " + name + "  (carried)"),
             ItemError = (name, detail) =>
                 Drawer.Append(LogKind.Error, "   [ERROR] " + name + " :: " + detail),
             DatWritten = (path, n) =>
@@ -310,7 +365,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             var soft = _softStop.Token;
             var hard = _hardStop.Token;
-            await Task.Run(() => DatEngine.Run(s, callbacks, soft, hard, previews));
+            await Task.Run(() => DatEngine.Run(runSettings, callbacks, soft, hard, previews));
             stopped = _softStop.IsCancellationRequested || _hardStop.IsCancellationRequested;
         }
         catch (Exception ex)

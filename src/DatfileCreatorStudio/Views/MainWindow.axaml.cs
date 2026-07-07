@@ -12,11 +12,28 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        // Folder drag & drop onto the two path boxes
+        // Folder drag & drop onto the path boxes
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         DragDrop.SetAllowDrop(InputBox, true);
         DragDrop.SetAllowDrop(OutputBox, true);
+        DragDrop.SetAllowDrop(IncrDatBox, true);
+
+        // The view supplies the Pre-flight Check dialog to the view model
+        DataContextChanged += (_, _) =>
+        {
+            if (ViewModel is { } vm)
+                vm.PreflightHandler = ShowPreflightAsync;
+        };
+    }
+
+    private async Task<PreflightOutcome?> ShowPreflightAsync(DatfileCreator.Core.DatSettings settings)
+    {
+        var dialog = new PreflightDialog
+        {
+            DataContext = new PreflightDialogViewModel(settings),
+        };
+        return await dialog.ShowDialog<PreflightOutcome?>(this);
     }
 
     private MainWindowViewModel? ViewModel => DataContext as MainWindowViewModel;
@@ -34,6 +51,13 @@ public partial class MainWindow : Window
         if (first?.TryGetLocalPath() is not string path)
             return;
 
+        // The incremental box accepts a dat FILE or a folder of dats as-is
+        if (ReferenceEquals(e.Source, IncrDatBox) || IsInside(e.Source as Control, IncrDatBox))
+        {
+            ViewModel.IncrementalDatPath = path;
+            return;
+        }
+
         // A dropped file counts as its containing folder
         if (File.Exists(path))
             path = Path.GetDirectoryName(path) ?? path;
@@ -42,6 +66,29 @@ public partial class MainWindow : Window
             ViewModel.OutputRoot = path;
         else
             ViewModel.InputRoot = path;
+    }
+
+    private async void OnBrowseIncrFile(object? sender, RoutedEventArgs e)
+    {
+        var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Select the existing dat file to update",
+            AllowMultiple = false,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Dat files") { Patterns = ["*.xml", "*.dat"] },
+                new FilePickerFileType("All files") { Patterns = ["*"] },
+            ],
+        });
+        if (result.Count > 0 && result[0].TryGetLocalPath() is string path && ViewModel is not null)
+            ViewModel.IncrementalDatPath = path;
+    }
+
+    private async void OnBrowseIncrFolder(object? sender, RoutedEventArgs e)
+    {
+        if (await PickFolderAsync("Select the folder containing your existing dats") is string path
+            && ViewModel is not null)
+            ViewModel.IncrementalDatPath = path;
     }
 
     private static bool IsInside(Control? control, Control target)

@@ -66,6 +66,9 @@ var settings = new DatSettings
     ExtExclude = Str("ext_exclude"),
     Multithread = Flag("multithread", true),
     Threads = Int("threads", 4),
+    Incremental = Flag("incremental"),
+    IncrementalDatPath = Str("incremental_dat_path"),
+    RetireOldDats = Flag("retire_old_dats", true),
 };
 
 bool failed = false;
@@ -75,6 +78,7 @@ var callbacks = new EngineCallbacks
     Totals = (jobs, items) => Console.WriteLine($"[totals] {jobs} jobs, {items} items"),
     Folder = (path, n) => Console.WriteLine($"[folder] {path} ({n} items)"),
     ItemHashed = (name, detail) => Console.WriteLine($"[ok] {name}{detail}"),
+    ItemCarried = name => Console.WriteLine($"[carried] {name}"),
     ItemError = (name, detail) => Console.WriteLine($"[err] {name} :: {detail}"),
     DatWritten = (path, n) => Console.WriteLine($"[dat] {path}"),
     Done = (ok, errors, done, total, dats, elapsed) =>
