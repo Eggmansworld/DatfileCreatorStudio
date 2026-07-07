@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DatfileCreator.Core/DatfileCreator.Core.csproj" />
+    <Project Path="src/DatfileCreatorStudio/DatfileCreatorStudio.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/ParityRunner/ParityRunner.csproj" />
+  </Folder>
+</Solution>

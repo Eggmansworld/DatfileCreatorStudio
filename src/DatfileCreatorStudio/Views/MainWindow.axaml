@@ -1,0 +1,258 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:ctrl="using:DatfileCreatorStudio.Views.Controls"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Datfile Creator Studio"
+        Width="1600" Height="900"
+        MinWidth="1360" MinHeight="820"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppContentBackground}">
+
+    <DockPanel>
+
+        <!-- ── Log drawer (bottom, auto-sliding) ─────────────────────── -->
+        <ctrl:LogDrawer DockPanel.Dock="Bottom" DataContext="{Binding Drawer}"/>
+
+        <!-- ── Action bar ────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource AppBarBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                Padding="16,10">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
+                <Button Grid.Column="0" Command="{Binding StartCommand}" Classes="accent"
+                        Padding="22,10" FontWeight="SemiBold"
+                        ToolTip.Tip="Save settings and start generating datfiles">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static root:Icons.Play}" Width="14" Height="14"/>
+                        <TextBlock Text="Start"/>
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="1" Command="{Binding SoftStopCommand}" Margin="10,0,0,0" Padding="16,10"
+                        ToolTip.Tip="Finish the current folder, write its dat, then stop">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static root:Icons.Stop}" Width="13" Height="13"/>
+                        <TextBlock Text="Soft Stop"/>
+                    </StackPanel>
+                </Button>
+                <Button Grid.Column="2" Command="{Binding HardStopCommand}" Margin="10,0,0,0" Padding="16,10"
+                        ToolTip.Tip="Abandon work as soon as possible — a partial dat is marked [INCOMPLETE]">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static root:Icons.Close}" Width="13" Height="13"/>
+                        <TextBlock Text="Hard Stop"/>
+                    </StackPanel>
+                </Button>
+
+                <TextBlock Grid.Column="4" Text="Theme:" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Classes="subtle"/>
+                <ComboBox Grid.Column="5" ItemsSource="{Binding ThemeChoices}"
+                          SelectedItem="{Binding SelectedTheme}" Width="110" VerticalAlignment="Center"
+                          ToolTip.Tip="Follow the operating system theme, or force Light/Dark"/>
+                <Button Grid.Column="6" Command="{Binding SaveSettingsCommand}" Margin="10,0,0,0" Padding="16,10"
+                        ToolTip.Tip="Save all current settings to the portable config file next to the exe (also saved automatically on Start)">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{x:Static root:Icons.ContentSave}" Width="13" Height="13"/>
+                        <TextBlock Text="Save Settings"/>
+                    </StackPanel>
+                </Button>
+            </Grid>
+        </Border>
+
+        <!-- ── Main content ──────────────────────────────────────────── -->
+        <Grid Margin="16,12,16,12" RowDefinitions="Auto,12,*,12,Auto">
+
+            <!-- Paths -->
+            <Border Grid.Row="0" Classes="card">
+                <Grid ColumnDefinitions="150,*,Auto" RowDefinitions="Auto,6,Auto,6,Auto">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldLabel" Text="Input top-level folder"
+                               ToolTip.Tip="The folder whose immediate subfolders become individual dat jobs. Drag &amp; drop a folder here."/>
+                    <TextBox Grid.Row="0" Grid.Column="1" Name="InputBox" Text="{Binding InputRoot}"
+                             Watermark="Folder containing the game folders you want to dat"/>
+                    <Button Grid.Row="0" Grid.Column="2" Margin="8,0,0,0" Click="OnBrowseInput"
+                            ToolTip.Tip="Browse for the input folder">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldLabel" Text="Output folder (dat root)"
+                               ToolTip.Tip="Root of the output structure. Datfiles are written into subfolders that mirror the input. Drag &amp; drop a folder here."/>
+                    <TextBox Grid.Row="2" Grid.Column="1" Name="OutputBox" Text="{Binding OutputRoot}"
+                             Watermark="Where the datfiles will be written (mirrors input folder structure)"/>
+                    <Button Grid.Row="2" Grid.Column="2" Margin="8,0,0,0" Click="OnBrowseOutput"
+                            ToolTip.Tip="Browse for the output folder">
+                        <PathIcon Data="{x:Static root:Icons.FolderOpen}" Width="14" Height="14"/>
+                    </Button>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Classes="fieldLabel" Text="Parent name (optional)"
+                               ToolTip.Tip="Prepended to every dat name: Parent - TopLevel - Subfolder. Useful for uniquely namespacing dats on distribution platforms."/>
+                    <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ParentName}"
+                             Watermark="Optional prefix for all dat names"/>
+                </Grid>
+            </Border>
+
+            <!-- Middle: header fields + options -->
+            <Grid Grid.Row="2" ColumnDefinitions="5*,12,7*">
+
+                <!-- DAT Header -->
+                <Border Grid.Column="0" Classes="card" VerticalAlignment="Stretch">
+                    <StackPanel>
+                        <TextBlock Classes="sectionHeader" Text="DAT Header"
+                                   ToolTip.Tip="These map directly to the &lt;header&gt; block in the output datfile. All fields are optional; blank fields write empty tags (valid Logiqx XML)."/>
+                        <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto,6,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldLabel" Text="Description"
+                                       ToolTip.Tip="Free text. Typically matches the collection name."/>
+                            <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding Description}"/>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldLabel" Text="Category"
+                                       ToolTip.Tip="e.g. PC, Arcade, Commodore"/>
+                            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Category}"/>
+                            <TextBlock Grid.Row="4" Grid.Column="0" Classes="fieldLabel" Text="Version"
+                                       ToolTip.Tip="Release version or date stamp"/>
+                            <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Version}"/>
+                            <TextBlock Grid.Row="6" Grid.Column="0" Classes="fieldLabel" Text="Date"
+                                       ToolTip.Tip="Used in the header &lt;date&gt; tag and the dat filename. Leave blank for today's date."/>
+                            <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding DateOverride}"
+                                     Watermark="(today)"/>
+                            <TextBlock Grid.Row="8" Grid.Column="0" Classes="fieldLabel" Text="Author"
+                                       ToolTip.Tip="Your name or handle"/>
+                            <TextBox Grid.Row="8" Grid.Column="1" Text="{Binding Author}"/>
+                            <TextBlock Grid.Row="10" Grid.Column="0" Classes="fieldLabel" Text="URL"
+                                       ToolTip.Tip="Project or source URL"/>
+                            <TextBox Grid.Row="10" Grid.Column="1" Text="{Binding Url}"/>
+                            <TextBlock Grid.Row="12" Grid.Column="0" Classes="fieldLabel" Text="Homepage"
+                                       ToolTip.Tip="Homepage URL"/>
+                            <TextBox Grid.Row="12" Grid.Column="1" Text="{Binding Homepage}"/>
+                            <TextBlock Grid.Row="14" Grid.Column="0" Classes="fieldLabel" Text="Comment"
+                                       ToolTip.Tip="Free text notes"/>
+                            <TextBox Grid.Row="14" Grid.Column="1" Text="{Binding Comment}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- Options -->
+                <Border Grid.Column="2" Classes="card" VerticalAlignment="Stretch">
+                    <Grid RowDefinitions="Auto,*,Auto" >
+                        <TextBlock Grid.Row="0" Classes="sectionHeader" Text="Dat Options"/>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="*,*,*,*">
+                            <!-- Dat Type -->
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Classes="groupLabel" Text="Dat Type"/>
+                                <RadioButton Classes="opt" GroupName="dattype" Content="Mixed — Archive as File"
+                                             IsChecked="{Binding DatTypeMixed}"
+                                             ToolTip.Tip="The file itself is the ROM entry — archives are hashed as single opaque files. Adds forcepacking=&quot;fileonly&quot; for RomVault."/>
+                                <RadioButton Classes="opt" GroupName="dattype" Content="Zipped"
+                                             IsChecked="{Binding DatTypeZipped}"
+                                             ToolTip.Tip="The contents of each zip are hashed. Each zip becomes a game entry; each file inside becomes a rom entry. Standard mode for No-Intro/Redump/TOSEC-style sets."/>
+                            </StackPanel>
+
+                            <!-- Generation -->
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Classes="groupLabel" Text="Generation"/>
+                                <RadioButton Classes="opt" GroupName="gen" Content="1 dat: whole input folder"
+                                             IsChecked="{Binding GenPerTop}"
+                                             ToolTip.Tip="The entire input folder is captured in ONE datfile, written directly into the output folder. Use for one-off scans of a single directory."/>
+                                <RadioButton Classes="opt" GroupName="gen" Content="1 dat per root folder"
+                                             IsChecked="{Binding GenPerRoot}"
+                                             ToolTip.Tip="Each immediate subfolder of the input root becomes one datfile; all content at any depth is rolled in. The most common mode."/>
+                                <RadioButton Classes="opt" GroupName="gen" Content="1 dat per folder (TOSEC style)"
+                                             IsChecked="{Binding GenPerAll}"
+                                             ToolTip.Tip="Every folder at every depth that contains content gets its own datfile. Output mirrors the input exactly."/>
+                            </StackPanel>
+
+                            <!-- Structure -->
+                            <StackPanel Grid.Column="2" Spacing="2" IsEnabled="{Binding IsStructureEnabled}">
+                                <TextBlock Classes="groupLabel" Text="Structure"
+                                           ToolTip.Tip="How the internal hierarchy of the datfile is expressed. Disabled in per-folder (TOSEC) mode where every dat is flat by definition."/>
+                                <RadioButton Classes="opt" GroupName="structure" Content="1 — Archives as Games"
+                                             IsChecked="{Binding StructOpt2}"
+                                             ToolTip.Tip="Archives become game entries; physical folders become dir entries. The default — matches No-Intro, Redump, TOSEC and most community dats."/>
+                                <RadioButton Classes="opt" GroupName="structure" Content="2 — First Level Dirs as Games"
+                                             IsChecked="{Binding StructOpt3}"
+                                             ToolTip.Tip="First-level subfolders are always rendered as game entries. Useful for multi-disc or multi-format releases where all variants live in one subfolder."/>
+                                <RadioButton Classes="opt" GroupName="structure" Content="3 — First Level Dirs + Merge"
+                                             IsChecked="{Binding StructOpt4}"
+                                             ToolTip.Tip="First-level subfolders become games; all deeper subfolders are merged flat into the game with path-prefixed rom names and empty directory markers."/>
+                                <RadioButton Classes="opt" GroupName="structure" Content="4 — Dirs (legacy)"
+                                             IsChecked="{Binding StructOpt1}"
+                                             ToolTip.Tip="Every folder at every depth becomes a dir tag; no game tags anywhere. Least common in practice."/>
+                            </StackPanel>
+
+                            <!-- Format -->
+                            <StackPanel Grid.Column="3" Spacing="2">
+                                <TextBlock Classes="groupLabel" Text="Format"/>
+                                <RadioButton Classes="opt" GroupName="format" Content="Modern"
+                                             IsChecked="{Binding FormatModern}"
+                                             ToolTip.Tip="game/machine tags for archive entries, dir tags for folders. The correct choice for RomVault."/>
+                                <RadioButton Classes="opt" GroupName="format" Content="Legacy"
+                                             IsChecked="{Binding FormatLegacy}"
+                                             ToolTip.Tip="All entries use dir tags (ClrMamePro's native format). Retained for older toolchains."/>
+                                <CheckBox Classes="opt" Content="Use &lt;machine&gt; tag" Margin="0,6,0,0"
+                                          IsChecked="{Binding UseMachine}" IsEnabled="{Binding IsModern}"
+                                          ToolTip.Tip="Use &lt;machine&gt; instead of &lt;game&gt; — the element name used by EmuMovies and MAME-derived dats. Leave off unless you specifically need it."/>
+                                <CheckBox Classes="opt" Content="Include &lt;description&gt;"
+                                          IsChecked="{Binding InclGameDesc}" IsEnabled="{Binding IsModern}"
+                                          ToolTip.Tip="Write a &lt;description&gt; element inside each game entry (matches the game name)."/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Hashes / filters / performance -->
+                        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Margin="0,14,0,0">
+                            <!-- Hashes -->
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Classes="groupLabel" Text="Hashes"/>
+                                <TextBlock Classes="subtle" FontSize="11" Text="CRC32 + SHA1 always included"/>
+                                <CheckBox Classes="opt" Content="MD5" IsChecked="{Binding IncludeMd5}"
+                                          ToolTip.Tip="Optional. Adds meaningful overhead per file."/>
+                                <CheckBox Classes="opt" Content="SHA-256" IsChecked="{Binding IncludeSha256}"
+                                          ToolTip.Tip="Optional. Informational — RomVault displays it but does not use it for matching. Adds hashing time without practical benefit."/>
+                                <CheckBox Classes="opt" Content="BLAKE3" IsChecked="{Binding IncludeBlake3}"
+                                          ToolTip.Tip="Optional, forward-looking hash. No current tool consumes it, but unknown attributes are ignored so dats stay fully valid."/>
+                            </StackPanel>
+
+                            <!-- Type-specific options -->
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Classes="groupLabel" Text="Type Options"/>
+                                <CheckBox Classes="opt" Content="forcepacking=&quot;fileonly&quot;"
+                                          IsChecked="{Binding ForcePacking}" IsEnabled="{Binding IsMixed}"
+                                          ToolTip.Tip="Mixed only: writes &lt;romvault forcepacking=&quot;fileonly&quot;/&gt; so RomVault treats every matched file as a file-only entry."/>
+                                <CheckBox Classes="opt" Content="File date &amp; time"
+                                          IsChecked="{Binding InclFileDate}" IsEnabled="{Binding IsZipped}"
+                                          ToolTip.Tip="Zipped only: write each rom's timestamp from the zip's internal metadata. TorrentZip / RV-ZStandard archives always show 1980/00/00 00-00-00 — this is intentional."/>
+                                <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,4,Auto" Margin="0,6,0,0"
+                                      IsEnabled="{Binding IsMixed}">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Classes="fieldLabel" FontSize="11" Text="Include only"
+                                               ToolTip.Tip="Mixed only: if set, only files matching these extensions are hashed. Comma-separated, leading dots optional, full filenames supported. Blank = include everything."/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ExtInclude}" FontSize="11"
+                                             Watermark=".ima, .mfm, .86f"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Classes="fieldLabel" FontSize="11" Text="Exclude"
+                                               ToolTip.Tip="Mixed only: files matching these extensions or exact filenames are always skipped."/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding ExtExclude}" FontSize="11"
+                                             Watermark=".nfo, .sfv, thumbs.db"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <!-- Performance -->
+                            <StackPanel Grid.Column="2" Spacing="2">
+                                <TextBlock Classes="groupLabel" Text="Performance"/>
+                                <CheckBox Classes="opt" Content="Multithreading" IsChecked="{Binding Multithread}"
+                                          ToolTip.Tip="Process multiple archives in parallel."/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Classes="fieldLabel" Text="Threads"/>
+                                    <ComboBox ItemsSource="{Binding ThreadChoices}" SelectedItem="{Binding Threads}"
+                                              Width="70" IsEnabled="{Binding Multithread}"
+                                              ToolTip.Tip="Number of concurrent worker threads (1–8). On a 1 Gbps link, 4–8 threads typically saturates the connection."/>
+                                </StackPanel>
+                                <TextBlock Classes="subtle" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"
+                                           Text="Network cap and incremental update arrive in upcoming sessions."/>
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Footer note -->
+            <TextBlock Grid.Row="4" Classes="subtle" FontSize="11"
+                       Text="Fully portable: all settings live in DatfileCreatorStudio.config next to the exe. Output mirrors the input folder structure — RomVault uses DatRoot folder structure to define collection boundaries."/>
+        </Grid>
+    </DockPanel>
+</Window>

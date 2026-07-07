@@ -1,0 +1,38 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="DatfileCreatorStudio.App"
+             RequestedThemeVariant="Default">
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppContentBackground" Color="#FBFBFD"/>
+                    <SolidColorBrush x:Key="AppBarBackground" Color="#F6F6F9"/>
+                    <SolidColorBrush x:Key="AppDrawerBackground" Color="#F6F6F9"/>
+                    <SolidColorBrush x:Key="AppCardBackground" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#E2E2E8"/>
+                    <SolidColorBrush x:Key="AppSubtleTextBrush" Color="#6B7075"/>
+                    <SolidColorBrush x:Key="AppLogBackground" Color="#FDFDFE"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppContentBackground" Color="#232327"/>
+                    <SolidColorBrush x:Key="AppBarBackground" Color="#1F1F24"/>
+                    <SolidColorBrush x:Key="AppDrawerBackground" Color="#1F1F24"/>
+                    <SolidColorBrush x:Key="AppCardBackground" Color="#2B2B31"/>
+                    <SolidColorBrush x:Key="AppBorderBrush" Color="#3C3C44"/>
+                    <SolidColorBrush x:Key="AppSubtleTextBrush" Color="#9A9FA6"/>
+                    <SolidColorBrush x:Key="AppLogBackground" Color="#1A1A1E"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <SolidColorBrush x:Key="AppAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+        </ResourceDictionary>
+    </Application.Resources>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://DatfileCreatorStudio/Views/Styles.axaml"/>
+    </Application.Styles>
+
+</Application>

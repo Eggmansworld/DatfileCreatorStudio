@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <AssemblyName>DatfileCreatorStudio</AssemblyName>
+        <RootNamespace>DatfileCreatorStudio</RootNamespace>
+        <Version>0.1.0</Version>
+        <Authors>Eggman</Authors>
+        <Product>Datfile Creator Studio</Product>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.2" />
+        <PackageReference Include="Avalonia.Diagnostics" Version="11.3.2" Condition="'$(Configuration)' == 'Debug'" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+        <!-- Explicit bump: Avalonia 11.3.2 pulls Tmds.DBus.Protocol 0.21.2 which has GHSA-xrw6-gwf8-vvr9 -->
+        <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\DatfileCreator.Core\DatfileCreator.Core.csproj" />
+    </ItemGroup>
+
+</Project>

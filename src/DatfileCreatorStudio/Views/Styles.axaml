@@ -1,0 +1,68 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Card container -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource AppCardBackground}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="14"/>
+    </Style>
+
+    <!-- Card section header -->
+    <Style Selector="TextBlock.sectionHeader">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,0,0,8"/>
+    </Style>
+
+    <!-- Subtle text -->
+    <Style Selector="TextBlock.subtle">
+        <Setter Property="Foreground" Value="{DynamicResource AppSubtleTextBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Field label -->
+    <Style Selector="TextBlock.fieldLabel">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Margin" Value="0,0,8,0"/>
+    </Style>
+
+    <!-- Option group label -->
+    <Style Selector="TextBlock.groupLabel">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+    </Style>
+
+    <!-- Compact radio buttons and checkboxes in option groups -->
+    <Style Selector="RadioButton.opt, CheckBox.opt">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="MinHeight" Value="26"/>
+        <Setter Property="Padding" Value="6,0,0,0"/>
+    </Style>
+
+    <!-- Wrapped, width-limited tooltips everywhere -->
+    <Style Selector="ToolTip">
+        <Setter Property="MaxWidth" Value="440"/>
+    </Style>
+    <Style Selector="ToolTip TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- Monospace log lines -->
+    <Style Selector="TextBlock.logLine">
+        <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,DejaVu Sans Mono,Liberation Mono,monospace"/>
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+    </Style>
+
+    <!-- Compact icon buttons for toolbars -->
+    <Style Selector="Button.icon">
+        <Setter Property="Padding" Value="8,6"/>
+        <Setter Property="Background" Value="Transparent"/>
+    </Style>
+
+</Styles>

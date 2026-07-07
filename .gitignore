@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+dist/
+release/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Test / parity scratch output
+parity-out/
+TestCollection/
+
+# Portable config written next to a locally-run debug build
+DatfileCreatorStudio.config
