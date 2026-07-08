@@ -69,6 +69,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _incrementalDatPath = d.IncrementalDatPath;
         _retireOldDats = d.RetireOldDats;
         _selectedTheme = settings.Config.Theme;
+        _selectedAccent = settings.Config.AccentTheme;
 
         Drawer.ReportInfo($"Config: {SettingsService.ConfigPath}");
     }
@@ -210,6 +211,19 @@ public partial class MainWindowViewModel : ViewModelBase
             "Dark" => ThemeVariant.Dark,
             _ => ThemeVariant.Default,
         };
+    }
+
+    // ── Accent theme ─────────────────────────────────────────────────────
+
+    public string[] AccentChoices { get; } = AccentThemes.Names;
+
+    [ObservableProperty] private string _selectedAccent;
+
+    partial void OnSelectedAccentChanged(string value)
+    {
+        AccentThemes.Apply(value);
+        _settings.Config.AccentTheme = value;
+        _settings.Save();
     }
 
     // ── Settings capture ─────────────────────────────────────────────────

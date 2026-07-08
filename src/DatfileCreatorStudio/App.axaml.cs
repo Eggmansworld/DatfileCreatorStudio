@@ -21,6 +21,8 @@ public partial class App : Application
             var settings = new SettingsService();
             settings.Load();
             MainWindowViewModel.ApplyTheme(settings.Config.Theme);
+            AccentThemes.CaptureSystemDefaults();
+            AccentThemes.Apply(settings.Config.AccentTheme);
 
             desktop.MainWindow = new MainWindow
             {

@@ -27,6 +27,10 @@
             </ResourceDictionary.ThemeDictionaries>
 
             <SolidColorBrush x:Key="AppAccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+            <!-- The slim signature bar across the top of the main window. Replaced
+                 at runtime by the chosen accent theme (a rainbow gradient for the
+                 Rainbow theme). -->
+            <SolidColorBrush x:Key="AppAccentBarBrush" Color="{DynamicResource SystemAccentColor}"/>
         </ResourceDictionary>
     </Application.Resources>
 

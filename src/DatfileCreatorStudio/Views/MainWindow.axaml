@@ -13,6 +13,9 @@
 
     <DockPanel>
 
+        <!-- ── Signature accent bar (changes with the chosen accent theme) ── -->
+        <Border DockPanel.Dock="Top" Height="3" Background="{DynamicResource AppAccentBarBrush}"/>
+
         <!-- ── Menu bar ──────────────────────────────────────────────── -->
         <Menu DockPanel.Dock="Top" Background="{DynamicResource AppBarBackground}">
             <MenuItem Header="_Tools">
@@ -52,7 +55,7 @@
         <Border DockPanel.Dock="Bottom" Background="{DynamicResource AppBarBackground}"
                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
                 Padding="16,10">
-            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto">
                 <Button Grid.Column="0" Command="{Binding StartCommand}" Classes="accent"
                         Padding="22,10" FontWeight="SemiBold"
                         ToolTip.Tip="Save settings and start generating datfiles">
@@ -89,7 +92,12 @@
                 <ComboBox Grid.Column="5" ItemsSource="{Binding ThemeChoices}"
                           SelectedItem="{Binding SelectedTheme}" Width="110" VerticalAlignment="Center"
                           ToolTip.Tip="Follow the operating system theme, or force Light/Dark"/>
-                <Button Grid.Column="6" Command="{Binding SaveSettingsCommand}" Margin="10,0,0,0" Padding="16,10"
+                <TextBlock Grid.Column="6" Text="Accent:" VerticalAlignment="Center" Margin="14,0,8,0"
+                           Classes="subtle"/>
+                <ComboBox Grid.Column="7" ItemsSource="{Binding AccentChoices}"
+                          SelectedItem="{Binding SelectedAccent}" Width="120" VerticalAlignment="Center"
+                          ToolTip.Tip="Recolour the accent (buttons, toggles, selection) and the signature bar at the top of the window. Try Rainbow!"/>
+                <Button Grid.Column="8" Command="{Binding SaveSettingsCommand}" Margin="10,0,0,0" Padding="16,10"
                         ToolTip.Tip="Save all current settings to the portable config file next to the exe (also saved automatically on Start)">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <PathIcon Data="{x:Static root:Icons.ContentSave}" Width="13" Height="13"/>
@@ -100,7 +108,13 @@
         </Border>
 
         <!-- ── Main content ──────────────────────────────────────────── -->
-        <Grid Margin="16,12,16,12" RowDefinitions="Auto,12,*,12,Auto,10,Auto">
+        <Grid Margin="16,12,16,12" RowDefinitions="Auto,12,*,12,Auto,10,Auto"
+              Opacity="{Binding Drawer.IsExpanded, Converter={x:Static root:Converters.ExpandedToDim}}">
+            <Grid.Transitions>
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.22" Easing="CubicEaseOut"/>
+                </Transitions>
+            </Grid.Transitions>
 
             <!-- Paths -->
             <Border Grid.Row="0" Classes="card">

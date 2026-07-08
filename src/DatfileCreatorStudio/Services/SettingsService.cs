@@ -9,6 +9,9 @@ public sealed class AppConfig
     /// <summary>Theme selection: "System", "Light", or "Dark"</summary>
     public string Theme { get; set; } = "System";
 
+    /// <summary>Accent theme name (see AccentThemes); "System" uses the OS accent colour.</summary>
+    public string AccentTheme { get; set; } = "System";
+
     /// <summary>All dat generation options (the suite's Settings dataclass equivalent).</summary>
     public DatSettings Dat { get; set; } = new();
 }
