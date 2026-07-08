@@ -8,7 +8,7 @@ Bulk-generates datfiles compatible with **RomVault, ClrMamePro, and RomCenter**.
 
 Datfile Creator Studio is a native **C# / [Avalonia](https://avaloniaui.net/)** desktop application — a ground-up rewrite of the original Python/Tkinter *Datfile Creator Suite*, with a modern Fluent interface, an auto-sliding activity-log drawer, true multithreaded hashing, and a single self-contained executable that needs no runtime installed. Its output is **byte-for-byte identical** to the original suite (see [Parity](#parity)).
 
-### 🛠 Included Tools
+### 🛠 Additional Included Tools
 
 | Tool | What it does |
 |---|---|
