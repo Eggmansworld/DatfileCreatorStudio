@@ -70,8 +70,8 @@ public partial class GameRomCounterViewModel : ViewModelBase
     [ObservableProperty] private string _emptyDats = "—";
     [ObservableProperty] private string _parseErrors = "—";
 
-    partial void OnViewTreeChanged(bool v) { if (v) PopulateRows(); }
-    partial void OnViewFlatChanged(bool v) { if (v) PopulateRows(); }
+    partial void OnViewTreeChanged(bool value) { if (value) PopulateRows(); }
+    partial void OnViewFlatChanged(bool value) { if (value) PopulateRows(); }
 
     public bool HasResults => _results.Count > 0;
 

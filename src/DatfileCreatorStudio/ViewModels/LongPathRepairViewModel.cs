@@ -87,10 +87,10 @@ public partial class LongPathRepairViewModel : ViewModelBase
     [ObservableProperty] private bool _filterCrit;
     [ObservableProperty] private bool _filterPending;
 
-    partial void OnFilterAllChanged(bool v) { if (v) Repopulate(); }
-    partial void OnFilterWarnChanged(bool v) { if (v) Repopulate(); }
-    partial void OnFilterCritChanged(bool v) { if (v) Repopulate(); }
-    partial void OnFilterPendingChanged(bool v) { if (v) Repopulate(); }
+    partial void OnFilterAllChanged(bool value) { if (value) Repopulate(); }
+    partial void OnFilterWarnChanged(bool value) { if (value) Repopulate(); }
+    partial void OnFilterCritChanged(bool value) { if (value) Repopulate(); }
+    partial void OnFilterPendingChanged(bool value) { if (value) Repopulate(); }
 
     private string _sortCol = "length";
     private bool _sortRev;
