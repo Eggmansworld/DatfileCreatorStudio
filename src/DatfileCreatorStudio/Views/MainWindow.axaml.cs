@@ -158,6 +158,22 @@ public partial class MainWindow : Window
     private void OnOpenReadOnly(object? sender, RoutedEventArgs e) =>
         new RemoveReadOnlyWindow { DataContext = new RemoveReadOnlyViewModel() }.Show(this);
 
+    private void OnOpenAbout(object? sender, RoutedEventArgs e) =>
+        new AboutWindow().ShowDialog(this);
+
+    private void OnOpenGitHub(object? sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                "https://github.com/Eggmansworld/DatfileCreatorStudio") { UseShellExecute = true });
+        }
+        catch
+        {
+            // best-effort
+        }
+    }
+
     private void OnPreviewClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is not { } vm || vm.PreviewEntries.Count == 0)

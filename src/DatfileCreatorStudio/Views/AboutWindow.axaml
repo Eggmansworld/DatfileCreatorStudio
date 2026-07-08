@@ -1,0 +1,58 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DatfileCreatorStudio.Views.AboutWindow"
+        Title="About Eggman's Datfile Creator Studio"
+        Width="640" SizeToContent="Height"
+        MinWidth="640" MaxWidth="640"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <StackPanel Margin="0">
+
+        <!-- Banner -->
+        <Border ClipToBounds="True">
+            <Image Source="avares://DatfileCreatorStudio/Assets/banner.png"
+                   Stretch="UniformToFill" MaxHeight="180"/>
+        </Border>
+
+        <StackPanel Margin="22,18,22,18" Spacing="12">
+            <StackPanel Spacing="2">
+                <TextBlock Text="Eggman's Datfile Creator Studio" FontSize="20" FontWeight="SemiBold"/>
+                <TextBlock Name="VersionText" Classes="subtle" FontSize="12"/>
+            </StackPanel>
+
+            <TextBlock Classes="subtle" FontSize="12" TextWrapping="Wrap"
+                       Text="Bulk-generates clean, consistent Logiqx XML datfiles for RomVault, ClrMamePro, and RomCenter — plus nine dat and archive tools. A native C#/Avalonia application, fully portable and self-contained."/>
+
+            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+            <Grid ColumnDefinitions="90,*" RowDefinitions="Auto,8,Auto,8,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Project" FontWeight="SemiBold" FontSize="12"/>
+                <Button Grid.Row="0" Grid.Column="1" Classes="link" Padding="0" Click="OnGitHubClick"
+                        HorizontalAlignment="Left"
+                        Content="github.com/Eggmansworld/DatfileCreatorStudio"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Created by" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" FontSize="12" TextWrapping="Wrap"
+                           Text="Eggman — for the retro game preservation community."/>
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Built with" FontWeight="SemiBold" FontSize="12"/>
+                <TextBlock Grid.Row="4" Grid.Column="1" FontSize="12" TextWrapping="Wrap"
+                           Text="Claude (Anthropic), using the Fable coding model — pair-programmed with Eggman across a series of sessions to port the original Python/Tkinter suite to C#/Avalonia, with every datfile output verified byte-for-byte against the original."/>
+            </Grid>
+
+            <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+            <TextBlock Classes="subtle" FontSize="11" TextWrapping="Wrap"
+                       Text="Source code and documentation are MIT-licensed. Archived game data, binaries, firmware, and media assets are not covered by that license and remain the property of their respective copyright holders. See LICENSE and NOTICE."/>
+
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,4,0,0">
+                <Button Grid.Column="0" Padding="12,7" Click="OnCoffeeClick"
+                        Content="☕ Buy Me a Coffee"
+                        ToolTip.Tip="Support the work at buymeacoffee.com/eggmansworld"/>
+                <Button Grid.Column="2" Classes="accent" Padding="18,7" Click="OnCloseClick" Content="Close"/>
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</Window>

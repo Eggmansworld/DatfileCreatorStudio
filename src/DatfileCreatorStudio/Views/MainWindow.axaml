@@ -5,7 +5,7 @@
         xmlns:root="using:DatfileCreatorStudio"
         x:Class="DatfileCreatorStudio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Datfile Creator Studio"
+        Title="Eggman's Datfile Creator Studio"
         Width="1600" Height="900"
         MinWidth="1360" MinHeight="820"
         WindowStartupLocation="CenterScreen"
@@ -36,6 +36,12 @@
                           ToolTip.Tip="Wrap files into uncompressed ZIP_STORED archives — a neutral wrapper before downstream recompression"/>
                 <MenuItem Header="Remove ReadOnly Attribute..." Click="OnOpenReadOnly"
                           ToolTip.Tip="Clear read-only flags and remove the Zone.Identifier 'downloaded from another computer' stream in bulk"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="View on GitHub" Click="OnOpenGitHub"
+                          ToolTip.Tip="Open the project page in your browser"/>
+                <Separator/>
+                <MenuItem Header="About Datfile Creator Studio..." Click="OnOpenAbout"/>
             </MenuItem>
         </Menu>
 

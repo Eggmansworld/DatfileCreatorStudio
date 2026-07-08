@@ -29,4 +29,9 @@
         <ProjectReference Include="..\DatfileCreator.Core\DatfileCreator.Core.csproj" />
     </ItemGroup>
 
+    <!-- Bundled images (About banner) — embedded so they survive single-file publish -->
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
 </Project>
