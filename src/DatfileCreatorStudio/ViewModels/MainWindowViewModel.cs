@@ -71,6 +71,12 @@ public partial class MainWindowViewModel : ViewModelBase
         _selectedTheme = settings.Config.Theme;
         _selectedAccent = settings.Config.AccentTheme;
 
+        var cop = settings.Config.Copper;
+        _copperSpeed = cop.Speed;
+        _copperBarSize = cop.BarSize;
+        _copperCycleSpeed = cop.CycleSpeed;
+        _copperWiggle = cop.Wiggle;
+
         Drawer.ReportInfo($"Config: {SettingsService.ConfigPath}");
     }
 
@@ -224,6 +230,43 @@ public partial class MainWindowViewModel : ViewModelBase
         AccentThemes.Apply(value);
         _settings.Config.AccentTheme = value;
         _settings.Save();
+        OnPropertyChanged(nameof(IsRainbow));
+    }
+
+    // ── Rainbow copper-bars easter egg ───────────────────────────────────
+
+    /// <summary>True only while the Rainbow accent is selected — gates the
+    /// copper-bar background and the "Rainbow" menu.</summary>
+    public bool IsRainbow => SelectedAccent == "Rainbow";
+
+    [ObservableProperty] private double _copperSpeed;
+    [ObservableProperty] private double _copperBarSize;
+    [ObservableProperty] private double _copperCycleSpeed;
+    [ObservableProperty] private double _copperWiggle;
+
+    partial void OnCopperSpeedChanged(double value) => SaveCopper();
+    partial void OnCopperBarSizeChanged(double value) => SaveCopper();
+    partial void OnCopperCycleSpeedChanged(double value) => SaveCopper();
+    partial void OnCopperWiggleChanged(double value) => SaveCopper();
+
+    private void SaveCopper()
+    {
+        var c = _settings.Config.Copper;
+        c.Speed = CopperSpeed;
+        c.BarSize = CopperBarSize;
+        c.CycleSpeed = CopperCycleSpeed;
+        c.Wiggle = CopperWiggle;
+        _settings.Save();
+    }
+
+    /// <summary>Restore the copper-bar knobs to their gentle defaults.</summary>
+    public void ResetCopperDefaults()
+    {
+        var d = new CopperSettings();
+        CopperSpeed = d.Speed;
+        CopperBarSize = d.BarSize;
+        CopperCycleSpeed = d.CycleSpeed;
+        CopperWiggle = d.Wiggle;
     }
 
     // ── Settings capture ─────────────────────────────────────────────────

@@ -1,0 +1,62 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        x:Class="DatfileCreatorStudio.Views.RainbowControlsWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Copper Bar Controls"
+        Width="460" SizeToContent="Height"
+        MinWidth="460" MaxWidth="460"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <StackPanel Margin="22,18,22,18" Spacing="14">
+
+        <StackPanel Spacing="3">
+            <TextBlock Text="Copper Bars" FontSize="19" FontWeight="SemiBold"/>
+            <TextBlock Classes="subtle" FontSize="12" TextWrapping="Wrap"
+                       Text="A blast from the Amiga demoscene past. These raster bars drift behind the window while the Rainbow accent is active, showing through the gaps between panels. They gently pause after five minutes of no interaction and wake again when you return."/>
+        </StackPanel>
+
+        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+        <!-- Motion speed -->
+        <StackPanel Spacing="3">
+            <TextBlock Text="Motion speed" FontSize="12" FontWeight="SemiBold"/>
+            <Slider Minimum="0" Maximum="1" Value="{Binding CopperSpeed}"
+                    TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    ToolTip.Tip="How fast the bars drift up the screen"/>
+        </StackPanel>
+
+        <!-- Bar size -->
+        <StackPanel Spacing="3">
+            <TextBlock Text="Bar size" FontSize="12" FontWeight="SemiBold"/>
+            <Slider Minimum="10" Maximum="64" Value="{Binding CopperBarSize}"
+                    TickFrequency="2" IsSnapToTickEnabled="True"
+                    ToolTip.Tip="Thickness of each copper bar"/>
+        </StackPanel>
+
+        <!-- Colour cycling -->
+        <StackPanel Spacing="3">
+            <TextBlock Text="Colour cycle speed" FontSize="12" FontWeight="SemiBold"/>
+            <Slider Minimum="0" Maximum="1" Value="{Binding CopperCycleSpeed}"
+                    TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    ToolTip.Tip="How fast the bars shift through the rainbow"/>
+        </StackPanel>
+
+        <!-- Wiggle -->
+        <StackPanel Spacing="3">
+            <TextBlock Text="Wiggle" FontSize="12" FontWeight="SemiBold"/>
+            <Slider Minimum="0" Maximum="1" Value="{Binding CopperWiggle}"
+                    TickFrequency="0.05" IsSnapToTickEnabled="True"
+                    ToolTip.Tip="Organic left-right / up-down sway of the bars"/>
+        </StackPanel>
+
+        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Content="Reset to defaults" Padding="12,7" Click="OnReset"/>
+            <Button Grid.Column="2" Classes="accent" Content="Close" Padding="18,7" Click="OnClose"/>
+        </Grid>
+    </StackPanel>
+</Window>

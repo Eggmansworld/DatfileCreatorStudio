@@ -11,6 +11,18 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource AppContentBackground}">
 
+    <Panel>
+
+    <!-- ── Copper-bar raster (Rainbow accent only) — sits behind everything
+         and shows through the gaps between the opaque panels ── -->
+    <ctrl:CopperBars x:Name="Copper"
+                     IsActive="{Binding IsRainbow}"
+                     IsVisible="{Binding IsRainbow}"
+                     Speed="{Binding CopperSpeed}"
+                     BarSize="{Binding CopperBarSize}"
+                     CycleSpeed="{Binding CopperCycleSpeed}"
+                     Wiggle="{Binding CopperWiggle}"/>
+
     <DockPanel>
 
         <!-- ── Signature accent bar (changes with the chosen accent theme) ── -->
@@ -45,6 +57,11 @@
                           ToolTip.Tip="Open the project page in your browser"/>
                 <Separator/>
                 <MenuItem Header="About Datfile Creator Studio..." Click="OnOpenAbout"/>
+            </MenuItem>
+            <!-- Appears only while the Rainbow accent is active (easter egg) -->
+            <MenuItem Header="_Rainbow" IsVisible="{Binding IsRainbow}">
+                <MenuItem Header="Copper Bar Controls..." Click="OnOpenRainbowControls"
+                          ToolTip.Tip="Tune the Amiga-style copper bars drifting behind the window — speed, size, colour cycling and wiggle"/>
             </MenuItem>
         </Menu>
 
@@ -341,4 +358,6 @@
                        Text="Fully portable: all settings live in DatfileCreatorStudio.config next to the exe. Output mirrors the input folder structure — RomVault uses DatRoot folder structure to define collection boundaries."/>
         </Grid>
     </DockPanel>
+
+    </Panel>
 </Window>

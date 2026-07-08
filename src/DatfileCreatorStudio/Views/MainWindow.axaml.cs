@@ -25,6 +25,16 @@ public partial class MainWindow : Window
             if (ViewModel is { } vm)
                 vm.PreflightHandler = ShowPreflightAsync;
         };
+
+        // Keep the copper-bar animation awake while the user is interacting;
+        // it idles itself after five minutes of silence. Tunnel + handledEventsToo
+        // so we see every pointer/key event regardless of where it lands.
+        AddHandler(InputElement.PointerMovedEvent, (_, _) => Copper.RegisterActivity(),
+            RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(InputElement.PointerPressedEvent, (_, _) => Copper.RegisterActivity(),
+            RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(InputElement.KeyDownEvent, (_, _) => Copper.RegisterActivity(),
+            RoutingStrategies.Tunnel, handledEventsToo: true);
     }
 
     private async Task<PreflightOutcome?> ShowPreflightAsync(DatfileCreator.Core.DatSettings settings)
@@ -160,6 +170,12 @@ public partial class MainWindow : Window
 
     private void OnOpenAbout(object? sender, RoutedEventArgs e) =>
         new AboutWindow().ShowDialog(this);
+
+    private void OnOpenRainbowControls(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+            new RainbowControlsWindow { DataContext = vm }.Show(this);
+    }
 
     private void OnOpenGitHub(object? sender, RoutedEventArgs e)
     {

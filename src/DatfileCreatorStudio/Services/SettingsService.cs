@@ -12,8 +12,32 @@ public sealed class AppConfig
     /// <summary>Accent theme name (see AccentThemes); "System" uses the OS accent colour.</summary>
     public string AccentTheme { get; set; } = "System";
 
+    /// <summary>Copper-bars easter-egg settings (active only with the Rainbow accent).</summary>
+    public CopperSettings Copper { get; set; } = new();
+
     /// <summary>All dat generation options (the suite's Settings dataclass equivalent).</summary>
     public DatSettings Dat { get; set; } = new();
+}
+
+/// <summary>
+/// Tunables for the Rainbow-accent copper-bar background animation. Defaults
+/// are deliberately gentle so the effect is a subtle surprise, not a strobe.
+/// </summary>
+public sealed class CopperSettings
+{
+    /// <summary>Vertical drift rate, 0 (still) .. 1 (brisk).</summary>
+    public double Speed { get; set; } = 0.35;
+
+    /// <summary>Bar thickness in pixels.</summary>
+    public double BarSize { get; set; } = 28;
+
+    /// <summary>Colour-cycling rate, 0 (frozen hue) .. 1 (fast).</summary>
+    public double CycleSpeed { get; set; } = 0.25;
+
+    /// <summary>Organic sway amount, 0 .. 1.</summary>
+    public double Wiggle { get; set; } = 0.35;
+
+    public CopperSettings Clone() => (CopperSettings)MemberwiseClone();
 }
 
 /// <summary>
@@ -53,7 +77,13 @@ public sealed class SettingsService
     {
         try
         {
-            var clone = new AppConfig { Theme = Config.Theme, Dat = Config.Dat.Clone() };
+            var clone = new AppConfig
+            {
+                Theme = Config.Theme,
+                AccentTheme = Config.AccentTheme,
+                Copper = Config.Copper.Clone(),
+                Dat = Config.Dat.Clone(),
+            };
             clone.Dat.Date = ""; // never persist the run date
             File.WriteAllText(ConfigPath, JsonSerializer.Serialize(clone, JsonOptions));
         }
