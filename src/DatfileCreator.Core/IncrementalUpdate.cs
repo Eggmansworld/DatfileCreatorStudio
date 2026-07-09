@@ -124,6 +124,28 @@ public static class IncrementalUpdate
             index.Add(gname, roms);
         }
 
+        // Loose <rom> entries directly under <datafile> (Mixed dats emit root
+        // files unwrapped). Index each as a single-file entry keyed by its own
+        // name so incremental carry-forward and validation still see them —
+        // otherwise they'd be re-hashed on every run.
+        foreach (var romEl in root.Elements())
+        {
+            if (romEl.Name.LocalName is not ("rom" or "disk" or "file"))
+                continue;
+            string rname = romEl.Attribute("name")?.Value ?? "";
+            if (rname.Length == 0)
+                continue;
+            index.Add(rname, [new DatRomRecord(
+                rname,
+                romEl.Attribute("size")?.Value,
+                romEl.Attribute("crc")?.Value,
+                romEl.Attribute("sha1")?.Value,
+                romEl.Attribute("sha256")?.Value,
+                romEl.Attribute("md5")?.Value,
+                romEl.Attribute("blake3")?.Value,
+                romEl.Attribute("date")?.Value)]);
+        }
+
         return (index, header, "");
     }
 

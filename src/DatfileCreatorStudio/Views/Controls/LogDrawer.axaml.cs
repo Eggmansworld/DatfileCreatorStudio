@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using DatfileCreatorStudio.ViewModels;
 
 namespace DatfileCreatorStudio.Views.Controls;
@@ -13,6 +15,13 @@ public partial class LogDrawer : UserControl
     private const double ExpandedHeight = 320;
 
     private LogDrawerViewModel? _viewModel;
+
+    // Auto-scroll (tail-follow) state. We drive the ListBox's own ScrollViewer
+    // directly instead of ScrollIntoView, which — called synchronously before
+    // freshly added virtualized rows are measured — scrolls to a stale offset
+    // and drifts behind the output.
+    private ScrollViewer? _scroll;
+    private bool _autoScroll = true;
 
     public LogDrawer()
     {
@@ -25,14 +34,14 @@ public partial class LogDrawer : UserControl
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
-            _viewModel.LinesFlushed -= ScrollToEnd;
+            _viewModel.LinesFlushed -= OnLinesFlushed;
         }
 
         _viewModel = DataContext as LogDrawerViewModel;
         if (_viewModel is not null)
         {
             _viewModel.PropertyChanged += OnViewModelPropertyChanged;
-            _viewModel.LinesFlushed += ScrollToEnd;
+            _viewModel.LinesFlushed += OnLinesFlushed;
             UpdateHeight();
         }
     }
@@ -46,10 +55,56 @@ public partial class LogDrawer : UserControl
     private void UpdateHeight() =>
         DrawerRoot.Height = _viewModel?.IsExpanded == true ? ExpandedHeight : CollapsedHeight;
 
-    private void ScrollToEnd()
+    private void OnLinesFlushed()
     {
-        if (_viewModel is { IsExpanded: true } vm && vm.Lines.Count > 0)
-            LogList.ScrollIntoView(vm.Lines[^1]);
+        if (_viewModel is not { IsExpanded: true })
+            return;
+        HookScroll();
+        // Best-effort pin now; the authoritative one happens in
+        // OnLogScrollChanged once the new rows have been laid out.
+        if (_autoScroll)
+            PinToBottom();
+    }
+
+    private void HookScroll()
+    {
+        if (_scroll is not null)
+            return;
+        _scroll = LogList.FindDescendantOfType<ScrollViewer>();
+        if (_scroll is not null)
+            _scroll.ScrollChanged += OnLogScrollChanged;
+    }
+
+    private void OnLogScrollChanged(object? sender, ScrollChangedEventArgs e)
+    {
+        if (_scroll is null)
+            return;
+
+        // The log grew (new lines added): re-pin to the bottom while following.
+        // ScrollChanged fires after layout, so Extent is current here.
+        if (Math.Abs(e.ExtentDelta.Y) > 0.5)
+        {
+            if (_autoScroll)
+                PinToBottom();
+            return;
+        }
+
+        // A pure offset change is the user scrolling: keep following only while
+        // they are parked within a line's height of the bottom.
+        if (Math.Abs(e.OffsetDelta.Y) > 0.5)
+        {
+            double distanceFromBottom =
+                _scroll.Extent.Height - (_scroll.Offset.Y + _scroll.Viewport.Height);
+            _autoScroll = distanceFromBottom <= 24.0;
+        }
+    }
+
+    private void PinToBottom()
+    {
+        if (_scroll is null)
+            return;
+        double max = Math.Max(0, _scroll.Extent.Height - _scroll.Viewport.Height);
+        _scroll.Offset = new Vector(_scroll.Offset.X, max);
     }
 
     private async void OnCopyLogClick(object? sender, RoutedEventArgs e)

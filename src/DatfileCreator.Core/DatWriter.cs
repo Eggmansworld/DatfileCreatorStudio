@@ -257,19 +257,11 @@ public static class DatWriter
                                        DatSettings s, int depth = 1)
     {
         string t = Tabs(depth);
-        string ti = Tabs(depth + 1);
-        if (depth == 1 && node.Items.Count > 0)
-        {
-            string tag = WriteGameOpen(f, node.Name, s, depth);
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, ti);
-            f.Write($"{t}</{tag}>\n");
-        }
-        else
-        {
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, t);
-        }
+        // Loose files sitting at the dat root are bare <rom> entries — never
+        // wrapped in a <game>. RomVault treats a <game> as a folder, so a
+        // wrapper here makes it relocate the root files into a subfolder.
+        foreach (string item in node.Items)
+            MRom(f, item, "", data, s, t);
         foreach (var sub in node.Subdirs)
             WriteMixedOpt2Node(f, sub, data, s, depth);
     }
@@ -297,18 +289,9 @@ public static class DatWriter
     {
         string t = Tabs(depth);
         string ti = Tabs(depth + 1);
-        if (depth == 1 && node.Items.Count > 0)
-        {
-            string tag = WriteGameOpen(f, node.Name, s, depth);
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, ti);
-            f.Write($"{t}</{tag}>\n");
-        }
-        else
-        {
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, t);
-        }
+        // Loose files at the dat root stay as bare <rom> entries (see WriteMixedOpt2).
+        foreach (string item in node.Items)
+            MRom(f, item, "", data, s, t);
         foreach (var sub in node.Subdirs)
         {
             // First-level: always game
@@ -364,18 +347,9 @@ public static class DatWriter
     {
         string t = Tabs(depth);
         string ti = Tabs(depth + 1);
-        if (depth == 1 && node.Items.Count > 0)
-        {
-            string tag = WriteGameOpen(f, node.Name, s, depth);
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, ti);
-            f.Write($"{t}</{tag}>\n");
-        }
-        else
-        {
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, t);
-        }
+        // Loose files at the dat root stay as bare <rom> entries (see WriteMixedOpt2).
+        foreach (string item in node.Items)
+            MRom(f, item, "", data, s, t);
         foreach (var sub in node.Subdirs)
         {
             // First-level: always game
