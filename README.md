@@ -6,6 +6,8 @@ Whether you're a casual collector who just wants RomVault to recognise your file
 
 Bulk-generates datfiles compatible with **RomVault, ClrMamePro, and RomCenter**. Supports both **Mixed (Archive as File)** and **Zipped** collection types across four structure options that mirror RomVault's own native output styles. An incremental update engine lets you rehash only what has changed, so revisiting a large collection doesn't mean starting from scratch. CRC32 and SHA1 are always included; MD5, SHA-256, and BLAKE3 are optional. ZStandard-compressed ZIPs are fully supported.
 
+<img width="135" height="150" alt="C# Avalonia badge_150px" src="https://github.com/user-attachments/assets/2d1356fc-4999-4205-8876-cf75e86031c5" />
+
 Datfile Creator Studio is a native **C# / [Avalonia](https://avaloniaui.net/)** desktop application — a ground-up rewrite of the original Python/Tkinter *Datfile Creator Suite*, with a modern Fluent interface, an auto-sliding activity-log drawer, true multithreaded hashing, and a single self-contained executable that needs no runtime installed. Its output is **byte-for-byte identical** to the original suite (see [Parity](#parity)).
 
 ### 🛠 Additional Included Tools
