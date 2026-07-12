@@ -15,8 +15,25 @@ public sealed class AppConfig
     /// <summary>Copper-bars easter-egg settings (active only with the Rainbow accent).</summary>
     public CopperSettings Copper { get; set; } = new();
 
+    /// <summary>End-of-run audio cue settings.</summary>
+    public SoundSettings Sound { get; set; } = new();
+
     /// <summary>All dat generation options (the suite's Settings dataclass equivalent).</summary>
     public DatSettings Dat { get; set; } = new();
+}
+
+/// <summary>Settings for the audio cue played when a datfile run finishes.</summary>
+public sealed class SoundSettings
+{
+    public bool Enabled { get; set; } = true;
+
+    /// <summary>
+    /// Path to a .wav or .mp3; empty = the bundled default in the sounds
+    /// folder. Relative paths resolve against the folder holding the exe.
+    /// </summary>
+    public string FilePath { get; set; } = "";
+
+    public SoundSettings Clone() => (SoundSettings)MemberwiseClone();
 }
 
 /// <summary>
@@ -82,6 +99,7 @@ public sealed class SettingsService
                 Theme = Config.Theme,
                 AccentTheme = Config.AccentTheme,
                 Copper = Config.Copper.Clone(),
+                Sound = Config.Sound.Clone(),
                 Dat = Config.Dat.Clone(),
             };
             clone.Dat.Date = ""; // never persist the run date

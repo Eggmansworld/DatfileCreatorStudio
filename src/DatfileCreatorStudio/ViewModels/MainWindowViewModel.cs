@@ -77,6 +77,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _copperCycleSpeed = cop.CycleSpeed;
         _copperWiggle = cop.Wiggle;
 
+        var snd = settings.Config.Sound;
+        _soundEnabled = snd.Enabled;
+        _soundFile = snd.FilePath;
+
         Drawer.ReportInfo($"Config: {SettingsService.ConfigPath}");
     }
 
@@ -269,6 +273,36 @@ public partial class MainWindowViewModel : ViewModelBase
         CopperWiggle = d.Wiggle;
     }
 
+    // ── Completion sound ─────────────────────────────────────────────────
+
+    /// <summary>Play an audio cue when a datfile run finishes.</summary>
+    [ObservableProperty] private bool _soundEnabled;
+
+    /// <summary>Configured sound path; empty = the bundled default cue.</summary>
+    [ObservableProperty] private string _soundFile;
+
+    partial void OnSoundEnabledChanged(bool value) => SaveSound();
+    partial void OnSoundFileChanged(string value) => SaveSound();
+
+    private void SaveSound()
+    {
+        var snd = _settings.Config.Sound;
+        snd.Enabled = SoundEnabled;
+        snd.FilePath = SoundFile.Trim();
+        _settings.Save();
+    }
+
+    private void PlayCompletionSound()
+    {
+        if (!SoundEnabled)
+            return;
+        if (SoundService.Resolve(SoundFile) is string cue)
+            SoundService.Play(cue);
+        else
+            Drawer.ReportInfo("Completion sound skipped — file not found: "
+                + (SoundFile.Trim().Length > 0 ? SoundFile : "sounds/" + SoundService.DefaultFileName));
+    }
+
     // ── Settings capture ─────────────────────────────────────────────────
 
     private DatSettings BuildSettings()
@@ -441,6 +475,9 @@ public partial class MainWindowViewModel : ViewModelBase
             if (HasPreview)
                 Drawer.ReportInfo($"{previews.Count} dat(s) available in the preview window.");
             Drawer.OnRunCompleted(ok, errorCount, stopped);
+            // Audio cue — the whole point is alerting a user who wandered off
+            // (a soft stop can take a while to finish, so it counts too).
+            PlayCompletionSound();
             _softStop?.Dispose();
             _hardStop?.Dispose();
             _softStop = null;

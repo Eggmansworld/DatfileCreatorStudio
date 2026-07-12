@@ -51,6 +51,9 @@
                           ToolTip.Tip="Wrap files into uncompressed ZIP_STORED archives — a neutral wrapper before downstream recompression"/>
                 <MenuItem Header="Remove ReadOnly Attribute..." Click="OnOpenReadOnly"
                           ToolTip.Tip="Clear read-only flags and remove the Zone.Identifier 'downloaded from another computer' stream in bulk"/>
+                <Separator/>
+                <MenuItem Header="Completion Sound..." Click="OnOpenCompletionSound"
+                          ToolTip.Tip="Choose the audio cue played when a datfile run finishes — drop your own .wav or .mp3 files into the sounds folder next to the exe"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="View on GitHub" Click="OnOpenGitHub"

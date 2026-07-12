@@ -1,0 +1,53 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:DatfileCreatorStudio.ViewModels"
+        xmlns:root="using:DatfileCreatorStudio"
+        x:Class="DatfileCreatorStudio.Views.CompletionSoundWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Completion Sound"
+        Width="540" SizeToContent="Height"
+        MinWidth="540" MaxWidth="540"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <StackPanel Margin="22,18,22,18" Spacing="14">
+
+        <StackPanel Spacing="3">
+            <TextBlock Text="Completion Sound" FontSize="19" FontWeight="SemiBold"/>
+            <TextBlock Classes="subtle" FontSize="12" TextWrapping="Wrap"
+                       Text="Plays an audio cue the moment a datfile run finishes — handy when a long run is going and you've wandered off. Two default sounds ship in the sounds folder next to the executable; drop your own .wav or .mp3 files in there (or browse anywhere) to use them instead."/>
+        </StackPanel>
+
+        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+        <CheckBox Content="Play a sound when a run finishes" IsChecked="{Binding SoundEnabled}"
+                  ToolTip.Tip="The cue plays on every run end — completed, completed with errors, or stopped"/>
+
+        <StackPanel Spacing="3" IsEnabled="{Binding SoundEnabled}">
+            <TextBlock Text="Sound file" FontSize="12" FontWeight="SemiBold"/>
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding SoundFile}"
+                         Watermark="sounds/datfile_generation_complete_default1.wav  (default)"
+                         ToolTip.Tip="A .wav or .mp3 file. Leave empty for the bundled default; paths inside the app folder are stored relative so the portable folder can move"/>
+                <Button Grid.Column="1" Content="Browse..." Margin="8,0,0,0" Padding="12,7" Click="OnBrowse"
+                        ToolTip.Tip="Pick a sound file — starts in the sounds folder next to the exe"/>
+            </Grid>
+            <TextBlock Name="StatusText" Classes="subtle" FontSize="11" Text=""/>
+        </StackPanel>
+
+        <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+        <Grid ColumnDefinitions="Auto,*,Auto">
+            <Button Grid.Column="0" Padding="12,7" Click="OnTest"
+                    IsEnabled="{Binding SoundEnabled}"
+                    ToolTip.Tip="Play the selected sound now">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{x:Static root:Icons.Play}" Width="12" Height="12"/>
+                    <TextBlock Text="Test"/>
+                </StackPanel>
+            </Button>
+            <Button Grid.Column="2" Classes="accent" Content="Close" Padding="18,7" Click="OnClose"/>
+        </Grid>
+    </StackPanel>
+</Window>

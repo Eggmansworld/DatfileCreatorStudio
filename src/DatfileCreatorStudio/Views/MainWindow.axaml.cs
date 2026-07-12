@@ -177,6 +177,12 @@ public partial class MainWindow : Window
             new RainbowControlsWindow { DataContext = vm }.Show(this);
     }
 
+    private void OnOpenCompletionSound(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is { } vm)
+            new CompletionSoundWindow { DataContext = vm }.ShowDialog(this);
+    }
+
     private void OnOpenGitHub(object? sender, RoutedEventArgs e)
     {
         try

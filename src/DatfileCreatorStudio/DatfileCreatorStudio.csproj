@@ -9,7 +9,7 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AssemblyName>DatfileCreatorStudio</AssemblyName>
         <RootNamespace>DatfileCreatorStudio</RootNamespace>
-        <Version>0.1.2</Version>
+        <Version>0.1.3</Version>
         <Authors>Eggman</Authors>
         <Product>Datfile Creator Studio</Product>
     </PropertyGroup>
@@ -32,6 +32,17 @@
     <!-- Bundled images (About banner) — embedded so they survive single-file publish -->
     <ItemGroup>
         <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+    <!-- Default completion sounds — shipped as loose files in sounds\ next to
+         the exe (not embedded) so users can add their own alongside them -->
+    <ItemGroup>
+        <Content Include="..\..\assets\datfile_generation_complete_default1.wav"
+                 Link="sounds\datfile_generation_complete_default1.wav"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+        <Content Include="..\..\assets\datfile_generation_complete_default2.wav"
+                 Link="sounds\datfile_generation_complete_default2.wav"
+                 CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
 
 </Project>
