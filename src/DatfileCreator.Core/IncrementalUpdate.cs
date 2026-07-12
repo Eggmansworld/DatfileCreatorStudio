@@ -530,6 +530,7 @@ public static class IncrementalUpdate
             string fname = Path.GetFileName(item);
             bool carried = false;
             string hashDiag = "";
+            cb.ItemStarted?.Invoke(fname);
             try
             {
                 if (isZipped)

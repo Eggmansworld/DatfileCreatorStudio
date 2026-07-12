@@ -36,10 +36,11 @@
                 <TextBlock Grid.Column="4" Text="{Binding ItemsText}" FontSize="12"
                            Foreground="{DynamicResource AppSubtleTextBrush}"
                            VerticalAlignment="Center" Margin="0,0,16,0"/>
-                <TextBlock Grid.Column="5" Text="{Binding LastLine}" FontSize="12"
+                <TextBlock Grid.Column="5" Text="{Binding ActivityLine}" FontSize="12"
                            FontFamily="Cascadia Mono,Consolas,DejaVu Sans Mono,Liberation Mono,monospace"
                            Foreground="{DynamicResource AppSubtleTextBrush}"
-                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="0,0,12,0"
+                           ToolTip.Tip="While a run is active this shows the file being processed right now; completed items scroll into the log below"/>
 
                 <Button Grid.Column="6" Classes="icon" Click="OnCopyLogClick"
                         ToolTip.Tip="Copy the full log to the clipboard" VerticalAlignment="Center">

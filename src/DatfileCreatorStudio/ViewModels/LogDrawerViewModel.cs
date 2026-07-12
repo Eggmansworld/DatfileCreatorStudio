@@ -64,6 +64,8 @@ public partial class LogDrawerViewModel : ViewModelBase
         _timer.Tick += (_, _) =>
         {
             FlushPending();
+            if (CurrentFile != _currentFilePending)
+                CurrentFile = _currentFilePending;
             if (_stopwatch.IsRunning)
                 Elapsed = _stopwatch.Elapsed.ToString(@"hh\:mm\:ss");
         };
@@ -74,13 +76,35 @@ public partial class LogDrawerViewModel : ViewModelBase
     private bool _isExpanded;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActivityLine))]
     private bool _isRunning;
 
     [ObservableProperty]
     private string _statusText = "Idle";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActivityLine))]
     private string _lastLine = "";
+
+    // ── Currently-processing file ────────────────────────────────────────
+    // Worker threads report every item as it STARTS via SetCurrentFile; the
+    // 150 ms timer publishes the latest value on the UI thread, so the strip
+    // shows what is being hashed right now (a big zip can sit here for
+    // minutes) while completed items keep flowing into the log as before.
+
+    /// <summary>Written from engine worker threads; read by the UI timer.</summary>
+    private volatile string _currentFilePending = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ActivityLine))]
+    private string _currentFile = "";
+
+    /// <summary>Thread-safe: record the item whose processing just began.</summary>
+    public void SetCurrentFile(string name) => _currentFilePending = name;
+
+    /// <summary>The strip's activity text: in-flight file while running, last log line otherwise.</summary>
+    public string ActivityLine =>
+        IsRunning && CurrentFile.Length > 0 ? "» " + CurrentFile : LastLine;
 
     [ObservableProperty]
     private string _elapsed = "";
@@ -126,6 +150,8 @@ public partial class LogDrawerViewModel : ViewModelBase
     {
         Append(LogKind.Info, "");
         Append(LogKind.Phase, "> " + summary);
+        _currentFilePending = "";
+        CurrentFile = "";
         IsRunning = true;
         IsExpanded = true;
         StatusText = "Running";
@@ -162,6 +188,8 @@ public partial class LogDrawerViewModel : ViewModelBase
         Elapsed = _stopwatch.Elapsed.ToString(@"hh\:mm\:ss");
         IsRunning = false;
         IsIndeterminate = false;
+        _currentFilePending = "";
+        CurrentFile = "";
 
         (StatusText, StatusBrush) = (stopped, ok, errorCount) switch
         {

@@ -18,6 +18,8 @@ public sealed class EngineCallbacks
     public Action<string, int>? Folder { get; init; }
     /// <summary>Processing entered a new subfolder within the job (relative path).</summary>
     public Action<string>? Subfolder { get; init; }
+    /// <summary>Item processing started: (basename). Fires from worker threads.</summary>
+    public Action<string>? ItemStarted { get; init; }
     /// <summary>Item completed: (total done so far).</summary>
     public Action<int>? Progress { get; init; }
     /// <summary>Item hashed OK: (basename, diagnostic detail or "").</summary>
@@ -520,6 +522,7 @@ public static class DatEngine
             // Returns (result-or-null, errorDetail-or-null)
             (object? Result, string? Error) SafeWork(string itemPath)
             {
+                cb.ItemStarted?.Invoke(Path.GetFileName(itemPath));
                 try
                 {
                     if (isMixed)

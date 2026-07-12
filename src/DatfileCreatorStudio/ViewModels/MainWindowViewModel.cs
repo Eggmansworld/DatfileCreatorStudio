@@ -434,6 +434,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 if (rel is not ("." or ""))
                     Drawer.Append(LogKind.Subfolder, "   [dir] " + rel);
             },
+            ItemStarted = name => Drawer.SetCurrentFile(name),
             Progress = done =>
                 Dispatcher.UIThread.Post(() => Drawer.OnProgress(done)),
             ItemHashed = (name, detail) =>
