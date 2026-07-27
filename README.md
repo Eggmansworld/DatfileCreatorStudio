@@ -303,7 +303,7 @@ Crime Wave Collection\
 Two features of this layout do the work of telling the structures apart:
 
 - **`Documentation\`** holds no files itself, only subfolders. *Standard* keeps it as a browsable directory; *Grouped* turns it into a single set.
-- **`saves\`** is empty. Only *Grouped + Folders* records it — the other two cannot, because a dat with no entry for a folder has no way to say that folder exists.
+- **`saves\`** is empty. All three record it with an explicit folder entry — a dat has no other way to state that a folder exists, and without one RomVault would never recreate it. Zero-byte files are captured the same way, with the canonical empty-content hashes.
 
 All examples are real output from the tool, trimmed of the header.
 
@@ -324,6 +324,7 @@ A folder that contains files becomes a set. A folder that contains only other fo
     <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
     <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
     <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
+    <rom name="saves/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
 </game>
 <game name="Deluxe Paint IV">
     <description>Deluxe Paint IV</description>
@@ -368,6 +369,7 @@ Compare against Standard: `Documentation` is no longer a directory containing tw
     <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
     <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
     <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
+    <rom name="saves/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
 </game>
 <game name="Deluxe Paint IV">
     <description>Deluxe Paint IV</description>
@@ -384,7 +386,7 @@ Compare against Standard: `Documentation` is no longer a directory containing tw
 
 **Use it when:** each top-level folder is one release and you want it reported as one thing. Multi-disc games, releases bundled with extras or goodies packs, and anything where "is this title complete?" is the question you actually want RomVault to answer.
 
-**Trade-off:** empty folders disappear. A dat has no way to mention a folder except through a rom entry, and Grouped writes none for folders — so `saves\` is simply absent, and RomVault will not recreate it.
+**Trade-off:** the folders that hold your files stop being visible as structure in RomVault's tree until it expands the rom paths — the information is all there, but a set with hundreds of merged files reads as one long list.
 
 ---
 
@@ -394,9 +396,9 @@ Compare against Standard: `Documentation` is no longer a directory containing tw
 
 *Mixed dats only.*
 
-Identical to Grouped in how it groups sets — the difference is that it also writes a zero-size marker entry for every subfolder. Those markers give the dat a way to state "this folder exists", independently of whether anything is inside it.
+Identical to Grouped in how it groups sets. The difference is that it writes a folder entry for **every** subfolder, not only the empty ones — look for `original/`, `Box Scans/` and `Manuals/` below, which all contain files.
 
-Look for the `original/`, `saves/`, `Box Scans/` and `Manuals/` entries below. `saves/` is the interesting one: it is an empty folder, and this is the only structure that preserves it.
+**RomVault discards those extra entries on load**, because a folder holding files is already implied by their paths. In RomVault the result is identical to Grouped. This structure is therefore only worth choosing when something *other* than RomVault reads your dats and expects every folder listed explicitly.
 
 ```xml
 <rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/>
@@ -404,9 +406,9 @@ Look for the `original/`, `saves/`, `Box Scans/` and `Manuals/` entries below. `
     <description>Crime Wave (1990)</description>
     <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
     <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
-    <rom name="original/" size="0" crc="00000000"/>
+    <rom name="original/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
     <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
-    <rom name="saves/" size="0" crc="00000000"/>
+    <rom name="saves/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
 </game>
 <game name="Deluxe Paint IV">
     <description>Deluxe Paint IV</description>
@@ -414,18 +416,18 @@ Look for the `original/`, `saves/`, `Box Scans/` and `Manuals/` entries below. `
 </game>
 <game name="Documentation">
     <description>Documentation</description>
-    <rom name="Box Scans/" size="0" crc="00000000"/>
+    <rom name="Box Scans/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
     <rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" sha1="ffa9c24c..."/>
-    <rom name="Manuals/" size="0" crc="00000000"/>
+    <rom name="Manuals/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
     <rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" sha1="8175e3c8..."/>
 </game>
 ```
 
-**RomVault shows the same 3 sets as Grouped**, and additionally recreates every folder — including `saves\`, which holds nothing. The marker entries are not files and never report as missing; they exist purely to carry the folder structure.
+**RomVault shows the same 3 sets as Grouped, with exactly the same folders** — the redundant entries are pruned as it loads (`DatClean.RemoveUnNeededDirectoriesFromZip`). Folder entries are not files and never report as missing.
 
-This is RomVault's own convention, not an invention of this tool: RomVault writes exactly these markers itself when it flattens an archive.
+This is RomVault's own convention rather than an invention of this tool: RomVault writes these same entries itself when it flattens an archive.
 
-**Use it when:** the folder layout is part of what you are preserving. Software that requires a specific directory tree to run, emulator or system installs with expected empty folders, and archival projects where the structure itself is data.
+**Use it when:** a tool other than RomVault consumes your dats and wants every folder spelled out. For RomVault alone, Grouped gives the same outcome with a smaller dat.
 
 **Trade-off:** more entries in the dat, and folder markers show up in listings and counts. Some third-party dat validators flag them as odd — they are not.
 
@@ -440,10 +442,9 @@ This is RomVault's own convention, not an invention of this tool: RomVault write
 | You want the dat to mirror your folder tree | **Standard** |
 | Each top-level folder is one title you want reported as one set | **Grouped** |
 | Multi-disc / bundled-extras releases | **Grouped** |
-| Empty folders must survive | **Grouped + Folders** |
-| Software that needs its directory tree intact to run | **Grouped + Folders** |
+| A non-RomVault tool needs every folder listed explicitly | **Grouped + Folders** |
 
-All three describe the same files with the same hashes. Switching structure changes how RomVault *groups and reports* them — never which files are tracked.
+All three describe the same files with the same hashes, and all three capture empty folders and zero-byte files. Switching structure changes how RomVault *groups and reports* them — never which files are tracked.
 
 ---
 

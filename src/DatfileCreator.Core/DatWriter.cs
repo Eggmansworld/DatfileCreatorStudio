@@ -138,14 +138,45 @@ public static class DatWriter
                                  e.Blake3, s.IncludeBlake3) + "\n");
     }
 
-    /// <summary>Recursively flatten a Mixed subtree into path-prefixed rom entries.</summary>
-    private static void MMerge(TextWriter f, FolderNode node, DatData data, DatSettings s,
-                               string prefix, string indent)
+    // Canonical hashes of zero-byte content — shared by empty files and by the
+    // folder entries below, which RomVault treats as zero-byte members.
+    private const string EmptySha1 = "da39a3ee5e6b4b0d3255bfef95601890afd80709";
+    private const string EmptySha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    private const string EmptyMd5 = "d41d8cd98f00b204e9800998ecf8427e";
+    private const string EmptyBlake3 = "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262";
+
+    /// <summary>
+    /// A folder entry (trailing '/'), the only way a dat can state that a
+    /// folder exists. RomVault keeps these when nothing else in the set sits
+    /// inside that folder and prunes them when it does
+    /// (DatClean.RemoveUnNeededDirectoriesFromZip), so an empty folder is lost
+    /// for good if no entry is written for it.
+    /// </summary>
+    private static void MDirEntry(TextWriter f, string relPath, DatSettings s, string indent)
     {
+        f.Write(indent + RomLine(relPath + "/", 0, "00000000", EmptySha1,
+                                 EmptyMd5, EmptySha256, null,
+                                 s.IncludeMd5, s.IncludeSha256, false,
+                                 EmptyBlake3, s.IncludeBlake3) + "\n");
+    }
+
+    /// <summary>
+    /// Recursively flatten a Mixed subtree into path-prefixed rom entries.
+    /// <paramref name="allFolders"/> also writes an entry for folders that do
+    /// hold content; without it only folders with nothing at all inside them
+    /// get one, since every other folder is implied by the paths of its files.
+    /// </summary>
+    private static void MMerge(TextWriter f, FolderNode node, DatData data, DatSettings s,
+                               string prefix, string indent, bool allFolders)
+    {
+        if (prefix.Length > 0
+            && (allFolders || (node.Items.Count == 0 && node.Subdirs.Count == 0)))
+            MDirEntry(f, prefix, s, indent);
         foreach (string item in node.Items)
             MRom(f, item, prefix, data, s, indent);
         foreach (var sub in node.Subdirs)
-            MMerge(f, sub, data, s, prefix.Length > 0 ? prefix + "/" + sub.Name : sub.Name, indent);
+            MMerge(f, sub, data, s, prefix.Length > 0 ? prefix + "/" + sub.Name : sub.Name,
+                   indent, allFolders);
     }
 
     // ── Zipped atom helpers ──────────────────────────────────────────────
@@ -186,7 +217,7 @@ public static class DatWriter
             foreach (string item in node.Items)
                 MRom(f, item, "", data, s, ti);
             foreach (var sub in node.Subdirs)
-                MMerge(f, sub, data, s, sub.Name, ti);
+                MMerge(f, sub, data, s, sub.Name, ti, allFolders: false);
             f.Write($"{t}</{tag}>\n");
         }
         else
@@ -250,7 +281,7 @@ public static class DatWriter
             foreach (string item in sub.Items)
                 MRom(f, item, "", data, s, ti);
             foreach (var ssub in sub.Subdirs)
-                MMerge(f, ssub, data, s, ssub.Name, ti);
+                MMerge(f, ssub, data, s, ssub.Name, ti, allFolders: false);
             f.Write($"{t}</{tag}>\n");
         }
     }
@@ -271,12 +302,10 @@ public static class DatWriter
             string tag = WriteGameOpen(f, sub.Name, s, depth);
             foreach (string item in sub.Items)
                 MRom(f, item, "", data, s, ti);
-            // All subdirs merged: empty dir marker + path-prefixed roms
+            // All subdirs merged, each recorded by its own folder entry — at
+            // every depth, not just the first level.
             foreach (var ssub in sub.Subdirs)
-            {
-                f.Write($"{ti}<rom name=\"{XmlText.Xa(ssub.Name)}/\" size=\"0\" crc=\"00000000\"/>\n");
-                MMerge(f, ssub, data, s, ssub.Name, ti);
-            }
+                MMerge(f, ssub, data, s, ssub.Name, ti, allFolders: true);
             f.Write($"{t}</{tag}>\n");
         }
     }
