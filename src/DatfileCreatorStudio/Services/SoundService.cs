@@ -1,14 +1,13 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace DatfileCreatorStudio.Services;
 
 /// <summary>
-/// Plays the end-of-run audio cue (.wav or .mp3) with no external packages.
-/// Windows uses the built-in MCI (winmm), which handles both formats and
-/// plays asynchronously; Linux/macOS spawn the first available system player.
-/// Everything is best-effort — a missing file or player never disturbs a run.
+/// Plays the end-of-run audio cue (.wav or .mp3) with no external packages,
+/// using the built-in Windows MCI (winmm) — it handles both formats and plays
+/// asynchronously. Everything is best-effort: a missing file never disturbs
+/// a run.
 /// </summary>
 public static class SoundService
 {
@@ -19,7 +18,6 @@ public static class SoundService
     public const string DefaultFileName = "datfile_generation_complete_default1.wav";
 
     private const string Alias = "dcsCompletionCue";
-    private static Process? _unixPlayer;
 
     /// <summary>
     /// Turn the configured value into an absolute path: empty → bundled
@@ -56,10 +54,10 @@ public static class SoundService
         try
         {
             Stop();
-            if (OperatingSystem.IsWindows())
-                PlayWindows(absolutePath);
-            else
-                PlayUnix(absolutePath);
+            // MCI picks the device from the file extension (waveaudio /
+            // mpegvideo); the quoted form handles spaces in the path.
+            if (MciSendString($"open \"{absolutePath}\" alias {Alias}", null, 0, IntPtr.Zero) == 0)
+                MciSendString($"play {Alias}", null, 0, IntPtr.Zero);
         }
         catch
         {
@@ -71,69 +69,14 @@ public static class SoundService
     {
         try
         {
-            if (OperatingSystem.IsWindows())
-                MciSendString($"close {Alias}", null, 0, IntPtr.Zero);
-            else if (_unixPlayer is { HasExited: false } p)
-                p.Kill();
+            MciSendString($"close {Alias}", null, 0, IntPtr.Zero);
         }
         catch
         {
-            // Nothing was playing (or the player already exited) — fine.
+            // Nothing was playing — fine.
         }
     }
-
-    // ── Windows: MCI plays .wav and .mp3 asynchronously ──────────────────
 
     [DllImport("winmm.dll", CharSet = CharSet.Unicode, EntryPoint = "mciSendStringW")]
     private static extern int MciSendString(string command, StringBuilder? buffer, int bufferSize, IntPtr callback);
-
-    private static void PlayWindows(string path)
-    {
-        // MCI picks the device from the file extension (waveaudio/mpegvideo);
-        // the quoted form handles spaces in the path.
-        if (MciSendString($"open \"{path}\" alias {Alias}", null, 0, IntPtr.Zero) == 0)
-            MciSendString($"play {Alias}", null, 0, IntPtr.Zero);
-    }
-
-    // ── Linux/macOS: first available system player wins ──────────────────
-
-    private static void PlayUnix(string path)
-    {
-        bool isMp3 = path.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase);
-        (string Cmd, string[] Args)[] candidates = OperatingSystem.IsMacOS()
-            ? [("afplay", [path])]
-            : isMp3
-                ? [("mpg123", ["-q", path]),
-                   ("ffplay", ["-nodisp", "-autoexit", "-loglevel", "quiet", path]),
-                   ("paplay", [path])]
-                : [("paplay", [path]),
-                   ("aplay", ["-q", path]),
-                   ("ffplay", ["-nodisp", "-autoexit", "-loglevel", "quiet", path])];
-
-        foreach (var (cmd, args) in candidates)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo(cmd)
-                {
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                };
-                foreach (string a in args)
-                    psi.ArgumentList.Add(a);
-                var p = Process.Start(psi);
-                if (p is null)
-                    continue;
-                p.EnableRaisingEvents = true;
-                p.Exited += (_, _) => p.Dispose();
-                _unixPlayer = p;
-                return;
-            }
-            catch
-            {
-                // Player not installed — try the next candidate.
-            }
-        }
-    }
 }

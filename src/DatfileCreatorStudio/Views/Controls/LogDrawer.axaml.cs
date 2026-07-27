@@ -169,28 +169,10 @@ public partial class LogDrawer : UserControl
 
         try
         {
-            if (OperatingSystem.IsWindows())
-            {
-                if (File.Exists(path))
-                    Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = false });
-                else
-                    Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = false });
-            }
-            else if (OperatingSystem.IsMacOS())
-            {
-                var psi = new ProcessStartInfo("open");
-                if (File.Exists(path))
-                    psi.ArgumentList.Add("-R");
-                psi.ArgumentList.Add(path);
-                Process.Start(psi);
-            }
+            if (File.Exists(path))
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = false });
             else
-            {
-                string target = File.Exists(path) ? Path.GetDirectoryName(path) ?? path : path;
-                var psi = new ProcessStartInfo("xdg-open");
-                psi.ArgumentList.Add(target);
-                Process.Start(psi);
-            }
+                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = false });
         }
         catch
         {
