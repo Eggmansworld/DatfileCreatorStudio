@@ -353,16 +353,28 @@ public static partial class DatValidator
     /// Validate one rom attribute set. Required: size (decimal), crc (8 hex),
     /// sha1 (40 hex). Optional md5/sha256/blake3 validated when present.
     /// Returns one (field, message) per anomaly.
+    ///
+    /// A name ending in '/' is a directory marker, not a file: it records that
+    /// a folder exists. RomVault writes these itself (DatClean.ArchiveFlat)
+    /// with a zero size and CRC and no other hashes, so demanding a sha1 of
+    /// them reports a problem that is not one. Values that ARE present are
+    /// still checked.
     /// </summary>
     public static List<(string Field, string Message)> CheckRomAttrs(
         IReadOnlyDictionary<string, string> attrs)
     {
         var issues = new List<(string, string)>();
 
-        foreach (string req in (string[])["size", "crc", "sha1"])
+        bool isDirEntry = attrs.TryGetValue("name", out string? nameVal)
+                          && nameVal.EndsWith('/');
+
+        if (!isDirEntry)
         {
-            if (!attrs.ContainsKey(req))
-                issues.Add((req, "Missing required attribute"));
+            foreach (string req in (string[])["size", "crc", "sha1"])
+            {
+                if (!attrs.ContainsKey(req))
+                    issues.Add((req, "Missing required attribute"));
+            }
         }
 
         if (attrs.TryGetValue("size", out string? sizeVal))
