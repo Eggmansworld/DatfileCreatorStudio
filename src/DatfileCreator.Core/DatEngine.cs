@@ -471,7 +471,8 @@ public static class DatEngine
                 // like the suite (items are NOT re-sorted in this mode)
                 var (incrData, incrDone, jobCarried, jobHashed, jobErrs) =
                     IncrementalUpdate.BuildIncrementalData(items, jobGameIndex, s,
-                                                           hardStop, cb, doneItems, throttle);
+                                                           hardStop, cb, doneItems, throttle,
+                                                           job.FolderPath);
                 data = incrData;
                 doneItems = incrDone;
                 errors.AddRange(jobErrs);

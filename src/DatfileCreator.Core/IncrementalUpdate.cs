@@ -18,11 +18,37 @@ public sealed class DatGameIndex
     public List<string> Order { get; } = [];
     public Dictionary<string, List<DatRomRecord>> Games { get; } = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Names that appeared more than once — two same-named games in different
+    /// folders collapse onto one another here, so whichever came last wins.
+    /// Carry-forward must never trust these: the surviving entry may describe
+    /// a different file entirely.
+    /// </summary>
+    public HashSet<string> DuplicateNames { get; } = new(StringComparer.Ordinal);
+
     public void Add(string name, List<DatRomRecord> roms)
     {
-        if (!Games.ContainsKey(name))
+        if (!Games.TryGetValue(name, out var existing))
             Order.Add(name);
+        else if (!SameContent(existing, roms))
+            DuplicateNames.Add(name); // genuinely different files sharing a name
         Games[name] = roms;
+    }
+
+    /// <summary>Two entries describe the same bytes, so either may be trusted.</summary>
+    private static bool SameContent(List<DatRomRecord> a, List<DatRomRecord> b)
+    {
+        if (a.Count != b.Count)
+            return false;
+        for (int i = 0; i < a.Count; i++)
+        {
+            if (!string.Equals(a[i].Name, b[i].Name, StringComparison.Ordinal)
+                || !string.Equals(a[i].Size, b[i].Size, StringComparison.Ordinal)
+                || !string.Equals(a[i].Crc, b[i].Crc, StringComparison.OrdinalIgnoreCase)
+                || !string.Equals(a[i].Sha1, b[i].Sha1, StringComparison.OrdinalIgnoreCase))
+                return false;
+        }
+        return true;
     }
 }
 
@@ -284,7 +310,7 @@ public static class IncrementalUpdate
 
                 if (folderSubdirs.Contains(gname))
                 {
-                    // Folder-based Mixed (Structure 3/4): game = subfolder;
+                    // Folder-based Mixed (Grouped / Grouped + Folders): game = subfolder;
                     // fully matched only when every listed rom file is present
                     var subFiles = new HashSet<string>(StringComparer.Ordinal);
                     try
@@ -374,17 +400,47 @@ public static class IncrementalUpdate
 
     // ── Carry-forward data builder ───────────────────────────────────────
 
+    /// <summary>Dat rom names always use '/' — normalise so keys compare cleanly.</summary>
+    private static string NormalizeSlashes(string s) => s.Replace('\\', '/');
+
+    /// <summary>
+    /// The item's path relative to the job folder, '/'-separated. Returns ""
+    /// when it cannot be expressed inside that folder, so the caller falls
+    /// back to the filename rather than matching on something misleading.
+    /// </summary>
+    private static string RelativeWithin(string folder, string filePath)
+    {
+        if (string.IsNullOrEmpty(folder))
+            return "";
+        try
+        {
+            string rel = Path.GetRelativePath(folder, filePath);
+            if (rel.Length == 0 || Path.IsPathRooted(rel)
+                || rel.StartsWith("..", StringComparison.Ordinal))
+                return "";
+            return NormalizeSlashes(rel);
+        }
+        catch
+        {
+            return "";
+        }
+    }
+
     /// <summary>
     /// For each item: carry forward stored hashes when it matches an existing
-    /// dat entry (filename + size + CRC for Zipped, filename + size for
-    /// Mixed), otherwise hash it fresh. Runs single-threaded in item order,
-    /// exactly like the suite. Returns updated done count plus carried /
-    /// hashed counts and errors.
+    /// dat entry (filename + size + CRC for Zipped, path + size for Mixed),
+    /// otherwise hash it fresh. Runs single-threaded in item order, exactly
+    /// like the suite. Returns updated done count plus carried / hashed counts
+    /// and errors.
+    ///
+    /// <paramref name="jobFolderPath"/> is the folder this job covers; item
+    /// paths are made relative to it so a dat entry is matched by its whole
+    /// path rather than just its filename.
     /// </summary>
     public static (DatData Data, int Done, int Carried, int Hashed, List<string> Errors)
         BuildIncrementalData(List<string> items, DatGameIndex gameIndex, DatSettings s,
                              CancellationToken hardStop, EngineCallbacks cb, int doneSoFar,
-                             BandwidthThrottle? throttle)
+                             BandwidthThrottle? throttle, string jobFolderPath)
     {
         bool isZipped = s.DatType == "zipped";
         var data = new DatData();
@@ -393,12 +449,40 @@ public static class IncrementalUpdate
         int carriedCount = 0;
         int hashedCount = 0;
 
-        // Flatten the game index into a quick lookup by expected filename.
-        // Zipped: "GameName.zip" → internal rom name → record.
-        // Mixed: every rom of every game indexed by basename (folder-based
-        // Mixed games have many files per game).
+        // Flatten the game index into a quick lookup.
+        //   Zipped: "GameName.zip" → internal rom name → record.
+        //   Mixed:  several candidate keys per rom (see below).
         var zipLookup = new Dictionary<string, Dictionary<string, DatRomRecord>>(StringComparer.Ordinal);
         var mixedLookup = new Dictionary<string, DatRomRecord>(StringComparer.Ordinal);
+        // Keys that resolve to genuinely different files. Two files can share a
+        // name, and if they also share a size the old basename-only lookup
+        // handed one of them the other's hashes — silent corruption. An
+        // ambiguous key is dropped so the file is rehashed instead.
+        var ambiguous = new HashSet<string>(StringComparer.Ordinal);
+
+        static bool SameContent(DatRomRecord a, DatRomRecord b) =>
+            string.Equals(a.Size, b.Size, StringComparison.Ordinal)
+            && string.Equals(a.Crc, b.Crc, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(a.Sha1, b.Sha1, StringComparison.OrdinalIgnoreCase);
+
+        void Offer(string key, DatRomRecord r)
+        {
+            if (key.Length == 0 || ambiguous.Contains(key))
+                return;
+            if (mixedLookup.TryGetValue(key, out var existing))
+            {
+                // A repeated key is only safe when both entries describe the
+                // same bytes (the same file present in two places).
+                if (!SameContent(existing, r))
+                {
+                    mixedLookup.Remove(key);
+                    ambiguous.Add(key);
+                }
+                return;
+            }
+            mixedLookup[key] = r;
+        }
+
         foreach (string gname in gameIndex.Order)
         {
             var roms = gameIndex.Games[gname];
@@ -406,6 +490,11 @@ public static class IncrementalUpdate
                 continue;
             if (isZipped)
             {
+                // Same-named zips in different folders collapse onto one entry
+                // in the index, so the survivor may describe a different
+                // archive — never carry those.
+                if (gameIndex.DuplicateNames.Contains(gname))
+                    continue;
                 var map = new Dictionary<string, DatRomRecord>(StringComparer.Ordinal);
                 foreach (var r in roms)
                     map[r.Name] = r;
@@ -415,9 +504,14 @@ public static class IncrementalUpdate
             {
                 foreach (var r in roms)
                 {
-                    string key = Path.GetFileName(r.Name);
-                    if (key.Length > 0)
-                        mixedLookup[key] = r;
+                    string rel = NormalizeSlashes(r.Name);
+                    // Most specific first: the entry's full path inside the dat
+                    // (game name + rom name) matches an item's path relative to
+                    // the job folder. The looser keys are fallbacks for dats
+                    // whose layout differs from the current run.
+                    Offer(NormalizeSlashes(gname) + "/" + rel, r);
+                    Offer(rel, r);
+                    Offer(Path.GetFileName(r.Name), r);
                 }
             }
         }
@@ -485,9 +579,18 @@ public static class IncrementalUpdate
 
         FileHashResult? TryCarryMixed(string filePath)
         {
-            string fname = Path.GetFileName(filePath);
-            if (!mixedLookup.TryGetValue(fname, out var rd))
-                return null; // new item
+            // Match on the item's path within the job first, so two files that
+            // share a name (and possibly a size) can never be confused for one
+            // another. Fall back to the bare filename only when it is
+            // unambiguous across the whole dat.
+            DatRomRecord? rd = null;
+            string rel = RelativeWithin(jobFolderPath, filePath);
+            if (rel.Length > 0)
+                mixedLookup.TryGetValue(rel, out rd);
+            if (rd is null)
+                mixedLookup.TryGetValue(Path.GetFileName(filePath), out rd);
+            if (rd is null)
+                return null; // new item, or ambiguous — hash it fresh
 
             long storedSize = ParseSize(rd.Size);
             long folderSize;
