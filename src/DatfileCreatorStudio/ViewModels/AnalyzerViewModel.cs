@@ -271,18 +271,21 @@ public partial class AnalyzerViewModel : ViewModelBase
         _main.GenPerTop = rec.GenMode == "per_top";
         _main.GenPerRoot = rec.GenMode == "per_root";
         _main.GenPerAll = rec.GenMode == "per_all";
-        _main.StructOpt1 = rec.Structure == "opt1";
-        _main.StructOpt2 = rec.Structure == "opt2";
         _main.StructOpt3 = rec.Structure == "opt3";
         _main.StructOpt4 = rec.Structure == "opt4";
-        _main.FormatModern = true;
-        _main.FormatLegacy = false;
+        _main.StructOpt2 = !_main.StructOpt3 && !_main.StructOpt4;
         _main.InclGameDesc = true;
         _main.InputRoot = r.RootPath;
 
+        string structName = rec.Structure switch
+        {
+            "opt3" => "Grouped",
+            "opt4" => "Grouped + Folders",
+            _ => "Standard",
+        };
         string summary = "Analyzer settings applied: "
             + (r.DatType == "mixed" ? "Mixed" : "Zipped")
-            + " | " + rec.GenMode + " | " + rec.Structure + " | Modern. "
+            + " | " + rec.GenMode + " | " + structName + ". "
             + "Review the output folder and header fields before clicking Start.";
         _main.Drawer.ReportInfo(summary);
         return summary;

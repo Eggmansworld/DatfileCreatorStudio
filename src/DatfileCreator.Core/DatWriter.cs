@@ -13,15 +13,29 @@ public sealed class DatData
 }
 
 /// <summary>
-/// Logiqx XML writers, ported line-for-line from the Python suite so output is
-/// byte-identical: tab indentation, LF newlines, UTF-8 without BOM, fixed
+/// Logiqx XML writers: tab indentation, LF newlines, UTF-8 without BOM, fixed
 /// attribute order (name, size, crc, sha1, sha256, md5, blake3, date).
 ///
 /// Structure options ("opt" keys match the suite's internal names):
-///   opt1 — Dirs (README "Structure 4", legacy)
-///   opt2 — Archives as Games (README "Structure 1", the default)
-///   opt3 — First Level Dirs as Games (README "Structure 2")
-///   opt4 — First Level Dirs as Games + Merge Dirs in Games (README "Structure 3")
+///   opt2 — "Standard"           (the default; the only shape valid for Zipped)
+///   opt3 — "Grouped"            — Mixed only
+///   opt4 — "Grouped + Folders"  — Mixed only
+///
+/// Zipped dats only ever use opt2: there a game resolves to a physical archive,
+/// so pointing one at a folder of separate zips would describe a collection that
+/// does not exist. See the note in WriteBody.
+///
+/// Every shape here obeys RomVault's grammar, which its DAT parser enforces by
+/// only ever looking for these children (see RVWorld/DATReader/DatXMLReader.cs):
+///   &lt;datafile&gt;      → dir, game, machine, rom, disk
+///   &lt;dir&gt;           → dir, game, machine        (NEVER rom — a dir holds sets)
+///   &lt;game&gt;/&lt;machine&gt; → rom, disk + metadata   (NEVER dir or game — a set holds files)
+/// A subfolder inside a set therefore has exactly one legal encoding: a '/' in
+/// the rom's name, which RomVault re-expands into a tree on load. Anything
+/// outside this grammar is silently DISCARDED by RomVault — it does not warn —
+/// so the old "Dirs" structure and "legacy" format (both of which put rom
+/// entries inside dir tags) produced dats that loaded as completely empty and
+/// have been retired.
 /// </summary>
 public static class DatWriter
 {
@@ -92,22 +106,20 @@ public static class DatWriter
 
     private static string Tabs(int depth) => new('\t', depth);
 
-    /// <summary>Game-level tag name based on settings.</summary>
-    private static string Gtag(DatSettings s)
-    {
-        if (s.DatFormat == "legacy")
-            return "dir";
-        return s.UseMachine ? "machine" : "game";
-    }
+    /// <summary>
+    /// Game-level tag name. Only "game"/"machine" are valid here — RomVault
+    /// reads rom entries from those two and nowhere else.
+    /// </summary>
+    private static string Gtag(DatSettings s) => s.UseMachine ? "machine" : "game";
 
-    /// <summary>Write opening game/dir tag + optional description. Returns tag used.</summary>
+    /// <summary>Write opening game tag + optional description. Returns tag used.</summary>
     private static string WriteGameOpen(TextWriter f, string name, DatSettings s, int depth)
     {
         string t = Tabs(depth);
         string ti = Tabs(depth + 1);
         string tag = Gtag(s);
         f.Write($"{t}<{tag} name=\"{XmlText.Xa(name)}\">\n");
-        if (tag != "dir" && s.InclGameDesc)
+        if (s.InclGameDesc)
             f.Write($"{ti}<description>{XmlText.Xe(name)}</description>\n");
         return tag;
     }
@@ -138,17 +150,17 @@ public static class DatWriter
 
     // ── Zipped atom helpers ──────────────────────────────────────────────
 
-    /// <summary>Write one zip as a game/dir block containing its internal rom entries.</summary>
+    /// <summary>Write one zip as a game block containing its internal rom entries.</summary>
     private static void ZBlock(TextWriter f, string zipPath, DatData data, DatSettings s,
-                               int depth, bool asGame, string nameOverride = "")
+                               int depth, string nameOverride = "")
     {
         string t = Tabs(depth);
         string ti = Tabs(depth + 1);
         string stem = Path.GetFileNameWithoutExtension(zipPath);
         string name = nameOverride.Length > 0 ? nameOverride : stem;
-        string tag = asGame ? Gtag(s) : "dir";
+        string tag = Gtag(s);
         f.Write($"{t}<{tag} name=\"{XmlText.Xa(name)}\">\n");
-        if (tag != "dir" && s.InclGameDesc)
+        if (s.InclGameDesc)
             f.Write($"{ti}<description>{XmlText.Xe(name)}</description>\n");
         if (data.Zipped.TryGetValue(zipPath, out var entries))
         {
@@ -160,73 +172,7 @@ public static class DatWriter
         f.Write($"{t}</{tag}>\n");
     }
 
-    /// <summary>
-    /// Recursively flatten a Zipped subtree into path-prefixed rom entries.
-    /// Each zip's internal files appear as prefix/stem/internal_path.
-    /// </summary>
-    private static void ZMerge(TextWriter f, FolderNode node, DatData data, DatSettings s,
-                               string prefix, string indent)
-    {
-        foreach (string zp in node.Items)
-        {
-            string stem = Path.GetFileNameWithoutExtension(zp);
-            string p = prefix.Length > 0 ? prefix + "/" + stem : stem;
-            if (data.Zipped.TryGetValue(zp, out var entries))
-            {
-                foreach (var r in entries)
-                    f.Write(indent + RomLine(p + "/" + r.Name, r.Size, r.Crc, r.Sha1,
-                                             r.Md5, r.Sha256, r.DateStr,
-                                             s.IncludeMd5, s.IncludeSha256, s.InclFileDate,
-                                             r.Blake3, s.IncludeBlake3) + "\n");
-            }
-        }
-        foreach (var sub in node.Subdirs)
-            ZMerge(f, sub, data, s, prefix.Length > 0 ? prefix + "/" + sub.Name : sub.Name, indent);
-    }
-
-    // ── Option 1 — Dirs ──────────────────────────────────────────────────
-
-    private static void WriteMixedOpt1(TextWriter f, FolderNode node, DatData data,
-                                       DatSettings s, int depth = 1)
-    {
-        string t = Tabs(depth);
-        string ti = Tabs(depth + 1);
-        // Root-level items wrapped in a game tag named after the folder
-        if (depth == 1 && node.Items.Count > 0)
-        {
-            string tag = WriteGameOpen(f, node.Name, s, depth);
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, ti);
-            f.Write($"{t}</{tag}>\n");
-        }
-        else
-        {
-            foreach (string item in node.Items)
-                MRom(f, item, "", data, s, t);
-        }
-        foreach (var sub in node.Subdirs)
-        {
-            f.Write($"{t}<dir name=\"{XmlText.Xa(sub.Name)}\">\n");
-            WriteMixedOpt1(f, sub, data, s, depth + 1);
-            f.Write($"{t}</dir>\n");
-        }
-    }
-
-    private static void WriteZippedOpt1(TextWriter f, FolderNode node, DatData data,
-                                        DatSettings s, int depth = 1)
-    {
-        string t = Tabs(depth);
-        foreach (string zp in node.Items)
-            ZBlock(f, zp, data, s, depth, asGame: false);
-        foreach (var sub in node.Subdirs)
-        {
-            f.Write($"{t}<dir name=\"{XmlText.Xa(sub.Name)}\">\n");
-            WriteZippedOpt1(f, sub, data, s, depth + 1);
-            f.Write($"{t}</dir>\n");
-        }
-    }
-
-    // ── Option 2 — Archives as Games ─────────────────────────────────────
+    // ── opt2 — "Standard" ────────────────────────────────────────────────
 
     private static void WriteMixedOpt2Node(TextWriter f, FolderNode node, DatData data,
                                            DatSettings s, int depth)
@@ -269,11 +215,11 @@ public static class DatWriter
     private static void WriteZippedOpt2(TextWriter f, FolderNode node, DatData data,
                                         DatSettings s, int depth = 1)
     {
-        // Archives as Games — fully recursive. Every zip → game; every
+        // Standard — fully recursive. Every zip → game; every
         // physical dir → dir. Internal zip paths flow through unchanged.
         string t = Tabs(depth);
         foreach (string zp in node.Items)
-            ZBlock(f, zp, data, s, depth, asGame: true);
+            ZBlock(f, zp, data, s, depth);
         foreach (var sub in node.Subdirs)
         {
             f.Write($"{t}<dir name=\"{XmlText.Xa(sub.Name)}\">\n");
@@ -282,7 +228,7 @@ public static class DatWriter
         }
     }
 
-    // ── Option 3 — First Level Dirs as Games ─────────────────────────────
+    // ── opt3 — "Grouped" ─────────────────────────────────────────────────
 
     private static void WriteMixedOpt3(TextWriter f, FolderNode node, DatData data,
                                        DatSettings s, int depth = 1)
@@ -294,53 +240,22 @@ public static class DatWriter
             MRom(f, item, "", data, s, t);
         foreach (var sub in node.Subdirs)
         {
-            // First-level: always game
+            // First-level: always game. Everything below it is merged into
+            // path-prefixed rom names — the only encoding RomVault understands
+            // for a subfolder inside a set. This used to branch on whether the
+            // folder had loose files at its top, emitting <dir> inside <game>
+            // when it did not; RomVault silently discarded those entries, so
+            // the set loaded empty and RV offered to relocate the real files.
             string tag = WriteGameOpen(f, sub.Name, s, depth);
-            if (sub.Items.Count > 0)
-            {
-                // Has files: files as rom, subdirs merged
-                foreach (string item in sub.Items)
-                    MRom(f, item, "", data, s, ti);
-                foreach (var ssub in sub.Subdirs)
-                    MMerge(f, ssub, data, s, ssub.Name, ti);
-            }
-            else
-            {
-                // Container: children as dir (NOT game)
-                foreach (var ssub in sub.Subdirs)
-                {
-                    f.Write($"{ti}<dir name=\"{XmlText.Xa(ssub.Name)}\">\n");
-                    WriteMixedOpt1(f, ssub, data, s, depth + 2);
-                    f.Write($"{ti}</dir>\n");
-                }
-            }
-            f.Write($"{t}</{tag}>\n");
-        }
-    }
-
-    private static void WriteZippedOpt3(TextWriter f, FolderNode node, DatData data,
-                                        DatSettings s, int depth = 1)
-    {
-        string t = Tabs(depth);
-        string ti = Tabs(depth + 1);
-        foreach (string zp in node.Items)
-            ZBlock(f, zp, data, s, depth, asGame: true);
-        foreach (var sub in node.Subdirs)
-        {
-            string tag = WriteGameOpen(f, sub.Name, s, depth);
-            foreach (string zp in sub.Items)
-                ZBlock(f, zp, data, s, depth + 1, asGame: true);
+            foreach (string item in sub.Items)
+                MRom(f, item, "", data, s, ti);
             foreach (var ssub in sub.Subdirs)
-            {
-                f.Write($"{ti}<dir name=\"{XmlText.Xa(ssub.Name)}\">\n");
-                WriteZippedOpt2(f, ssub, data, s, depth + 2);
-                f.Write($"{ti}</dir>\n");
-            }
+                MMerge(f, ssub, data, s, ssub.Name, ti);
             f.Write($"{t}</{tag}>\n");
         }
     }
 
-    // ── Option 4 — First Level Dirs as Games + Merge Dirs in Games ───────
+    // ── opt4 — "Grouped + Folders" ───────────────────────────────────────
 
     private static void WriteMixedOpt4(TextWriter f, FolderNode node, DatData data,
                                        DatSettings s, int depth = 1)
@@ -366,43 +281,35 @@ public static class DatWriter
         }
     }
 
-    private static void WriteZippedOpt4(TextWriter f, FolderNode node, DatData data,
-                                        DatSettings s, int depth = 1)
-    {
-        string t = Tabs(depth);
-        string ti = Tabs(depth + 1);
-        foreach (string zp in node.Items)
-            ZBlock(f, zp, data, s, depth, asGame: true);
-        foreach (var sub in node.Subdirs)
-        {
-            string tag = WriteGameOpen(f, sub.Name, s, depth);
-            foreach (string zp in sub.Items)
-                ZBlock(f, zp, data, s, depth + 1, asGame: true);
-            foreach (var ssub in sub.Subdirs)
-            {
-                f.Write($"{ti}<rom name=\"{XmlText.Xa(ssub.Name)}/\" size=\"0\" crc=\"00000000\"/>\n");
-                ZMerge(f, ssub, data, s, ssub.Name, ti);
-            }
-            f.Write($"{t}</{tag}>\n");
-        }
-    }
-
     // ── Dispatch ─────────────────────────────────────────────────────────
 
     public static void WriteBody(TextWriter f, FolderNode node, DatData data, DatSettings s)
     {
         bool mixed = s.DatType == "mixed";
-        string structure = s.Structure is "opt1" or "opt2" or "opt3" or "opt4" ? s.Structure : "opt2";
-        switch (structure, mixed)
+        // Retired values (notably the old "opt1" Dirs structure) fall back to
+        // the default rather than writing a dat RomVault cannot read.
+        string structure = s.Structure is "opt2" or "opt3" or "opt4" ? s.Structure : "opt2";
+
+        if (!mixed)
         {
-            case ("opt1", true): WriteMixedOpt1(f, node, data, s); break;
-            case ("opt1", false): WriteZippedOpt1(f, node, data, s); break;
-            case ("opt2", true): WriteMixedOpt2(f, node, data, s); break;
-            case ("opt2", false): WriteZippedOpt2(f, node, data, s); break;
-            case ("opt3", true): WriteMixedOpt3(f, node, data, s); break;
-            case ("opt3", false): WriteZippedOpt3(f, node, data, s); break;
-            case ("opt4", true): WriteMixedOpt4(f, node, data, s); break;
-            case ("opt4", false): WriteZippedOpt4(f, node, data, s); break;
+            // Zipped dats have exactly one valid shape. A <game> is a physical
+            // ARCHIVE here — RomVault resolves every game to a .zip via the
+            // dat-wide forcepacking setting (GetCompressionMethod in
+            // RomVaultCore/ReadDat/DatReader.cs), never per entry. The
+            // "first level dirs as games" structures pointed a game at a FOLDER
+            // holding several separate zips, which claims a single archive named
+            // after that folder exists — so RomVault would offer to repack the
+            // collection into one. There is no correct way to emit them here,
+            // so Zipped always uses Standard.
+            WriteZippedOpt2(f, node, data, s);
+            return;
+        }
+
+        switch (structure)
+        {
+            case "opt3": WriteMixedOpt3(f, node, data, s); break;
+            case "opt4": WriteMixedOpt4(f, node, data, s); break;
+            default: WriteMixedOpt2(f, node, data, s); break;
         }
     }
 

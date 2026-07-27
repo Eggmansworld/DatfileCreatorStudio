@@ -56,6 +56,9 @@
                           ToolTip.Tip="Choose the audio cue played when a datfile run finishes — drop your own .wav or .mp3 files into the sounds folder next to the exe"/>
             </MenuItem>
             <MenuItem Header="_Help">
+                <MenuItem Header="Structure Guide..." Click="OnOpenStructureGuide"
+                          ToolTip.Tip="What each structure does to your collection, with a worked example of the same folder written three ways"/>
+                <Separator/>
                 <MenuItem Header="View on GitHub" Click="OnOpenGitHub"
                           ToolTip.Tip="Open the project page in your browser"/>
                 <Separator/>
@@ -237,34 +240,34 @@
                             <StackPanel Grid.Column="2" Spacing="2" IsEnabled="{Binding IsStructureEnabled}">
                                 <TextBlock Classes="groupLabel" Text="Structure"
                                            ToolTip.Tip="How the internal hierarchy of the datfile is expressed. Disabled in per-folder (TOSEC) mode where every dat is flat by definition."/>
-                                <RadioButton Classes="opt" GroupName="structure" Content="1 — Archives as Games"
+                                <RadioButton Classes="opt" GroupName="structure" Content="Standard"
                                              IsChecked="{Binding StructOpt2}"
-                                             ToolTip.Tip="Archives become game entries; physical folders become dir entries. The default — matches No-Intro, Redump, TOSEC and most community dats."/>
-                                <RadioButton Classes="opt" GroupName="structure" Content="2 — First Level Dirs as Games"
+                                             ToolTip.Tip="Each archive — or each folder that directly holds files — is its own game entry, and the folders above it stay as dir entries. The default: matches No-Intro, Redump, TOSEC and most community dats, and the only structure valid for Zipped dats."/>
+                                <RadioButton Classes="opt" GroupName="structure" Content="Grouped"
                                              IsChecked="{Binding StructOpt3}"
-                                             ToolTip.Tip="First-level subfolders are always rendered as game entries. Useful for multi-disc or multi-format releases where all variants live in one subfolder."/>
-                                <RadioButton Classes="opt" GroupName="structure" Content="3 — First Level Dirs + Merge"
+                                             IsEnabled="{Binding AreFolderStructuresAvailable}"
+                                             ToolTip.Tip="Mixed dats only. Each first-level folder becomes one game entry and everything inside it is gathered in, with folder paths kept in the rom names. Useful when one folder holds every disc or variant of a single title."/>
+                                <RadioButton Classes="opt" GroupName="structure" Content="Grouped + Folders"
                                              IsChecked="{Binding StructOpt4}"
-                                             ToolTip.Tip="First-level subfolders become games; all deeper subfolders are merged flat into the game with path-prefixed rom names and empty directory markers."/>
-                                <RadioButton Classes="opt" GroupName="structure" Content="4 — Dirs (legacy)"
-                                             IsChecked="{Binding StructOpt1}"
-                                             ToolTip.Tip="Every folder at every depth becomes a dir tag; no game tags anywhere. Least common in practice."/>
+                                             IsEnabled="{Binding AreFolderStructuresAvailable}"
+                                             ToolTip.Tip="Mixed dats only. Grouped, and the folder layout inside each game is recorded too — so empty folders survive in the dat."/>
+                                <TextBlock Classes="subtle" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
+                                           IsVisible="{Binding IsZipped}"
+                                           Text="Zipped dats always use Standard — each archive is its own game entry."/>
+                                <Button Classes="link" Padding="0" Margin="0,4,0,0"
+                                        HorizontalAlignment="Left" Click="OnOpenStructureGuide"
+                                        Content="Which one do I want?"
+                                        ToolTip.Tip="Open the Structure Guide — the same folder written three ways, side by side"/>
                             </StackPanel>
 
-                            <!-- Format -->
+                            <!-- Tags -->
                             <StackPanel Grid.Column="3" Spacing="2">
-                                <TextBlock Classes="groupLabel" Text="Format"/>
-                                <RadioButton Classes="opt" GroupName="format" Content="Modern"
-                                             IsChecked="{Binding FormatModern}"
-                                             ToolTip.Tip="game/machine tags for archive entries, dir tags for folders. The correct choice for RomVault."/>
-                                <RadioButton Classes="opt" GroupName="format" Content="Legacy"
-                                             IsChecked="{Binding FormatLegacy}"
-                                             ToolTip.Tip="All entries use dir tags (ClrMamePro's native format). Retained for older toolchains."/>
-                                <CheckBox Classes="opt" Content="Use &lt;machine&gt; tag" Margin="0,6,0,0"
-                                          IsChecked="{Binding UseMachine}" IsEnabled="{Binding IsModern}"
-                                          ToolTip.Tip="Use &lt;machine&gt; instead of &lt;game&gt; — the element name used by EmuMovies and MAME-derived dats. Leave off unless you specifically need it."/>
+                                <TextBlock Classes="groupLabel" Text="Tags"/>
+                                <CheckBox Classes="opt" Content="Use &lt;machine&gt; tag"
+                                          IsChecked="{Binding UseMachine}"
+                                          ToolTip.Tip="Use &lt;machine&gt; instead of &lt;game&gt; — the element name used by EmuMovies and MAME-derived dats. RomVault reads both identically. Leave off unless you specifically need it."/>
                                 <CheckBox Classes="opt" Content="Include &lt;description&gt;"
-                                          IsChecked="{Binding InclGameDesc}" IsEnabled="{Binding IsModern}"
+                                          IsChecked="{Binding InclGameDesc}"
                                           ToolTip.Tip="Write a &lt;description&gt; element inside each game entry (matches the game name)."/>
                             </StackPanel>
                         </Grid>

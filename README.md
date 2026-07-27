@@ -4,7 +4,7 @@
 
 Whether you're a casual collector who just wants RomVault to recognise your files, or a preservation veteran managing hundreds of thousands of ROMs across structured archives, this tool was built for you. Point it at a folder, hit **Start**, and get clean, consistent **Logiqx XML** datfiles — no scripting, no manual XML editing, no guesswork.
 
-Bulk-generates datfiles compatible with **RomVault, ClrMamePro, and RomCenter**. Supports both **Mixed (Archive as File)** and **Zipped** collection types across four structure options that mirror RomVault's own native output styles. An incremental update engine lets you rehash only what has changed, so revisiting a large collection doesn't mean starting from scratch. CRC32 and SHA1 are always included; MD5, SHA-256, and BLAKE3 are optional. ZStandard-compressed ZIPs are fully supported.
+Bulk-generates datfiles compatible with **RomVault, ClrMamePro, and RomCenter**. Supports both **Mixed (Archive as File)** and **Zipped** collection types across three structure options, every one of them verified against RomVault's own dat parser. An incremental update engine lets you rehash only what has changed, so revisiting a large collection doesn't mean starting from scratch. CRC32 and SHA1 are always included; MD5, SHA-256, and BLAKE3 are optional. ZStandard-compressed ZIPs are fully supported.
 
 <img width="135" height="150" alt="C# Avalonia badge_150px" src="https://github.com/user-attachments/assets/2d1356fc-4999-4205-8876-cf75e86031c5" />
 
@@ -49,7 +49,7 @@ If this tool saves you time, consider supporting the work:
   - [Zipped](#zipped)
 - [Generation Modes](#generation-modes)
 - [Structure Options](#structure-options)
-- [Format: Modern vs Legacy](#format-modern-vs-legacy)
+- [Why there is no "Dirs" structure or "Legacy" format](#why-there-is-no-dirs-structure-or-legacy-format)
 - [Hash Options](#hash-options)
 - [Multithreading](#multithreading)
 - [Network Cap](#network-cap)
@@ -82,17 +82,9 @@ The only external dependency is optional and used by a single tool: the **Recurs
 
 ## Install
 
-### Windows
-
 1. Download the latest `DatfileCreatorStudio-win-x64.zip` from the [Releases](../../releases) page.
 2. Extract it anywhere.
 3. Run `DatfileCreatorStudio.exe`.
-
-### Linux
-
-1. Download `DatfileCreatorStudio-linux-x64.tar.gz` from the [Releases](../../releases) page.
-2. Extract it: `tar -xzf DatfileCreatorStudio-linux-x64.tar.gz`
-3. `chmod +x DatfileCreatorStudio/DatfileCreatorStudio` and run it.
 
 The app is fully portable — every setting lives in a single `DatfileCreatorStudio.config` file written next to the executable. No registry keys, no `%APPDATA%`, no temp files.
 
@@ -110,7 +102,6 @@ To produce a self-contained single-file build:
 
 ```
 pwsh ./publish-win.ps1      # -> dist/win-x64/DatfileCreatorStudio.exe
-./publish-linux.sh          # -> dist/linux-x64/DatfileCreatorStudio
 ```
 
 The solution is split into `DatfileCreator.Core` (the engine and all tool logic, no UI dependencies) and `DatfileCreatorStudio` (the Avalonia app).
@@ -126,9 +117,8 @@ The solution is split into `DatfileCreator.Core` (the engine and all tool logic,
 3. Fill in the fields in the header section to suit your dat(s).
 4. Choose **Dat Type**: Mixed or Zipped.
 5. Choose **Generation**: *1 dat per root folder* (most common).
-6. Choose **Structure**: *Archives as Games* is the right choice for the majority of collections.
-7. Choose **Format**: Modern.
-8. Click **Start**.
+6. Choose **Structure**: *Standard* is the right choice for the majority of collections.
+7. Click **Start**.
 
 The **activity log drawer** slides up automatically when the run begins, showing live status, a progress bar, elapsed time, and colour-coded activity. **Preview Dats** lights up when the run completes.
 
@@ -278,100 +268,204 @@ Use this mode for large heterogeneous collections where subfolders are logically
 
 ## Structure Options
 
-Structure controls how the internal hierarchy of a datfile is expressed. It applies to the two recursive (tree) modes — **1 Dat per Top-Level Folder** and **1 Dat per Root Folder** — where a single dat captures nested content. In **1 dat per root folder & all subfolders**, every dat is flat by definition, so the Structure radios are disabled.
+Structure answers one question: **where does a single dat entry begin?**
 
-The four structures replicate the output options from RomVault's dir2datUI tool. Use the **Preview window** to compare them side-by-side against your actual data before committing to a structure. Not sure where to start? Use **Tools → Analyze Folder Structure** first.
+Every dat is a list of *sets* (`<game>` entries). A set is the unit RomVault matches, fixes and reports on. The three structures differ only in where they draw the boundary of a set — at each archive, or at each top-level folder.
 
-### Reference Folder Layout
+Structure applies to the two recursive (tree) modes — **1 Dat per Top-Level Folder** and **1 Dat per Root Folder** — where one dat captures nested content. In **1 dat per root folder & all subfolders**, every dat is flat by definition, so the Structure options are disabled.
 
-All four examples below use this input:
+Use the **Preview window** to compare all three against your own data before committing — it re-renders instantly from the completed run, with no re-hashing. Not sure where to start? Run **Tools → Analyze Folder Structure** first.
+
+> **Zipped dats always use Standard.** *Grouped* and *Grouped + Folders* are Mixed-only, and the app disables them when you select Zipped. In a dat, a `<game>` resolves to a physical *archive* — RomVault decides that once for the whole dat from the `forcepacking` header, never per entry. So naming a folder that holds several separate zips as one set would claim an archive exists that does not, and RomVault would offer to repack your collection into it. There is no way to express "this folder is the set" in a Zipped dat, so the option is not offered.
+
+### The example collection
+
+All three examples below describe this same input folder, scanned as **Mixed**:
 
 ```
-Access Software PC Floppy Disk Image Collection\
-    Crime Wave (1990)\                    ← folder with direct archives
-        Crime Wave (1990) (Disk A).zip
-        Crime Wave (1990) (Disk B).zip
-        original\                         ← physical subfolder inside game folder
-            Crime Wave (1990) (v1.0).zip
-    Docs\                                 ← container folder, no direct archives
-        Amazon Docs\
-            Amazon - Manual.zip
-        Crime Wave Docs\
-            Crime Wave - Manual.zip
+Crime Wave Collection\
+    readme.txt                            ← loose file at the top level
+    Crime Wave (1990)\                    ← holds files AND a subfolder
+        Crime Wave (Disk A).ima
+        Crime Wave (Disk B).ima
+        original\
+            Crime Wave (v1.0).ima
+        saves\                            ← EMPTY folder
+    Deluxe Paint IV\                      ← holds files only
+        DPaint4.adf
+    Documentation\                        ← container: no files of its own
+        Box Scans\
+            Crime Wave Box.png
+        Manuals\
+            Crime Wave Manual.pdf
 ```
 
-### Structure 1 — Archives as Games
+Two features of this layout do the work of telling the structures apart:
 
-Archives become `<game>` entries. Physical filesystem folders become `<dir>` entries. Files inside archives that live in internal subfolders have their path preserved in the rom `name` attribute.
+- **`Documentation\`** holds no files itself, only subfolders. *Standard* keeps it as a browsable directory; *Grouped* turns it into a single set.
+- **`saves\`** is empty. Only *Grouped + Folders* records it — the other two cannot, because a dat with no entry for a folder has no way to say that folder exists.
 
-This is the **default and most widely used structure**. It matches the output format of No-Intro, Redump, TOSEC, and the majority of community-distributed dat files.
+All examples are real output from the tool, trimmed of the header.
+
+---
+
+### Standard
+
+> **One set per archive — or per folder that directly holds files.** The folders above stay as directories.
+
+This is the default, and it is what No-Intro, Redump, TOSEC and the overwhelming majority of community dats use. It mirrors your collection: the dat's shape follows your folder tree, and a set appears wherever the content actually lives, however deep that happens to be.
+
+A folder that contains files becomes a set. A folder that contains only other folders stays a `<dir>` — a container you can expand in RomVault — and the search continues inside it.
 
 ```xml
-<game name="Crime Wave (1990) (Disk A)">
-    <description>Crime Wave (1990) (Disk A)</description>
-    <rom name="Crime Wave (1990) (Disk A).ima" size="368640" crc="3a9f12b4" sha1="..."/>
+<rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/>
+<game name="Crime Wave (1990)">
+    <description>Crime Wave (1990)</description>
+    <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
+    <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
+    <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
 </game>
-<dir name="original">
-    <game name="Crime Wave (1990) (v1.0)">
-        <description>Crime Wave (1990) (v1.0)</description>
-        <rom name="Crime Wave (1990) (v1.0).ima" .../>
+<game name="Deluxe Paint IV">
+    <description>Deluxe Paint IV</description>
+    <rom name="DPaint4.adf" size="3" crc="be1437ad" sha1="2a93c572..."/>
+</game>
+<dir name="Documentation">
+    <game name="Box Scans">
+        <description>Box Scans</description>
+        <rom name="Crime Wave Box.png" size="4" crc="c4b3b3ae" sha1="ffa9c24c..."/>
+    </game>
+    <game name="Manuals">
+        <description>Manuals</description>
+        <rom name="Crime Wave Manual.pdf" size="3" crc="69a297d8" sha1="8175e3c8..."/>
     </game>
 </dir>
 ```
 
-**Use when:** Your collection uses standard zip-per-game organisation, with physical subfolders representing logical groupings.
+**RomVault shows 4 sets**, with `Documentation` as a folder you can open to find `Box Scans` and `Manuals` inside it as separate sets. `readme.txt` sits at the top as a loose file, exactly where it is on disk.
 
-> This structure represents **68.8% of all datfiles** in a survey of 10,497 dats across two large RomVault-managed collections (see [Advanced: Datfile Landscape Analysis](#advanced-datfile-landscape-analysis)).
+Note `original/Crime Wave (v1.0).ima` — the subfolder is kept as a path inside the rom name. That is the only way a dat can express a folder inside a set, and RomVault rebuilds it into a real subfolder when it loads.
 
-### Structure 2 — First Level Dirs as Games
+**Use it when:** almost always. Choose it unless you have a specific reason not to — and you must choose it for Zipped dats.
 
-The first level of physical subfolders inside the dat root are always rendered as `<game>` entries, regardless of whether they contain archives directly or act as containers. Deeper physical subfolders become `<dir>` entries.
-
-```xml
-<game name="Crime Wave (1990)">
-    <description>Crime Wave (1990)</description>
-    <rom name="Crime Wave (1990) (Disk A).ima" .../>
-    <rom name="original/Crime Wave (1990) (v1.0).ima" .../>
-</game>
-```
-
-**Use when:** Each first-level subfolder represents a complete game or release, and you want the folder itself — not its individual archives — to be the primary named entry in RomVault's database. Useful for multi-disc or multi-format releases.
-
-### Structure 3 — First Level Dirs as Games + Merge Dirs in Games
-
-First-level subfolders become `<game>` entries. All deeper physical subfolders are merged flat into that game entry. Each merged subfolder gets an empty directory marker rom (`size="0" crc="00000000"`) followed by its files listed with path-prefixed rom names.
-
-```xml
-<game name="Crime Wave (1990)">
-    <description>Crime Wave (1990)</description>
-    <rom name="Crime Wave (1990) (Disk A).ima" .../>
-    <rom name="original/" size="0" crc="00000000"/>
-    <rom name="original/Crime Wave (1990) (v1.0).ima" .../>
-</game>
-```
-
-**Use when:** Collections have deep and variable subfolder hierarchies, and you want a single flat game entry to capture everything within a top-level folder including folder structure metadata. Well-suited to tape archives, rhythm game collections, and any collection where internal directory layout is part of the preservation data.
-
-> In the survey, **2.0% of dats** used this structure — primarily complex arcade collections and large preservation projects with nesting depths between 4 and 9 levels.
-
-### Structure 4 — Dirs (legacy)
-
-Every folder at every depth becomes a `<dir>` tag. No `<game>` tags are used anywhere. Archives become `<dir>` entries containing their rom entries.
-
-**Use when:** Maximum structural compatibility is needed, or when your collection management tool treats all folder levels equivalently. Least common in practice.
+**Trade-off:** a title split across subfolders becomes several separate sets rather than one. If `Documentation` is conceptually one thing, Standard still reports it as two.
 
 ---
 
-## Format: Modern vs Legacy
+### Grouped
 
-| Setting | `<game>` / `<machine>` | `<dir>` | `<description>` |
-|---|---|---|---|
-| **Modern** | ✅ Used for archive entries | ✅ Used for folders | Optional (checkbox) |
-| **Legacy** | ❌ | All entries use `<dir>` | Not emitted |
+> **One set per top-level folder.** Everything inside is gathered into that single set, with folder paths kept in the rom names.
 
-**Modern** is the correct choice for RomVault. The Legacy format (all `<dir>` tags, no `<game>`) is ClrMamePro's native format and is retained for compatibility with older toolchains.
+*Mixed dats only.*
 
-When Modern is selected, an additional option appears: **Use `<machine>` instead of `<game>`**. This is the element name used by EmuMovies and some MAME-derived dat files. Unless you are producing dats specifically for an EmuMovies-style or MAME workflow, leave this set to `<game>`.
+Grouped draws the set boundary at a fixed depth: every first-level folder becomes exactly one set, whether or not it holds files directly. Nothing below that level appears as a separate entry — it is folded into the parent, with its path preserved in the rom name.
+
+Compare against Standard: `Documentation` is no longer a directory containing two sets. It is now **one set** whose contents happen to live in subfolders.
+
+```xml
+<rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/>
+<game name="Crime Wave (1990)">
+    <description>Crime Wave (1990)</description>
+    <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
+    <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
+    <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
+</game>
+<game name="Deluxe Paint IV">
+    <description>Deluxe Paint IV</description>
+    <rom name="DPaint4.adf" size="3" crc="be1437ad" sha1="2a93c572..."/>
+</game>
+<game name="Documentation">
+    <description>Documentation</description>
+    <rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" sha1="ffa9c24c..."/>
+    <rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" sha1="8175e3c8..."/>
+</game>
+```
+
+**RomVault shows 3 sets** — one per top-level folder — with no intermediate directories to expand. Every file is still tracked at its exact path; only the *grouping* changed.
+
+**Use it when:** each top-level folder is one release and you want it reported as one thing. Multi-disc games, releases bundled with extras or goodies packs, and anything where "is this title complete?" is the question you actually want RomVault to answer.
+
+**Trade-off:** empty folders disappear. A dat has no way to mention a folder except through a rom entry, and Grouped writes none for folders — so `saves\` is simply absent, and RomVault will not recreate it.
+
+---
+
+### Grouped + Folders
+
+> **Grouped, plus the folder layout recorded.** Empty folders survive.
+
+*Mixed dats only.*
+
+Identical to Grouped in how it groups sets — the difference is that it also writes a zero-size marker entry for every subfolder. Those markers give the dat a way to state "this folder exists", independently of whether anything is inside it.
+
+Look for the `original/`, `saves/`, `Box Scans/` and `Manuals/` entries below. `saves/` is the interesting one: it is an empty folder, and this is the only structure that preserves it.
+
+```xml
+<rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/>
+<game name="Crime Wave (1990)">
+    <description>Crime Wave (1990)</description>
+    <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
+    <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
+    <rom name="original/" size="0" crc="00000000"/>
+    <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
+    <rom name="saves/" size="0" crc="00000000"/>
+</game>
+<game name="Deluxe Paint IV">
+    <description>Deluxe Paint IV</description>
+    <rom name="DPaint4.adf" size="3" crc="be1437ad" sha1="2a93c572..."/>
+</game>
+<game name="Documentation">
+    <description>Documentation</description>
+    <rom name="Box Scans/" size="0" crc="00000000"/>
+    <rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" sha1="ffa9c24c..."/>
+    <rom name="Manuals/" size="0" crc="00000000"/>
+    <rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" sha1="8175e3c8..."/>
+</game>
+```
+
+**RomVault shows the same 3 sets as Grouped**, and additionally recreates every folder — including `saves\`, which holds nothing. The marker entries are not files and never report as missing; they exist purely to carry the folder structure.
+
+This is RomVault's own convention, not an invention of this tool: RomVault writes exactly these markers itself when it flattens an archive.
+
+**Use it when:** the folder layout is part of what you are preserving. Software that requires a specific directory tree to run, emulator or system installs with expected empty folders, and archival projects where the structure itself is data.
+
+**Trade-off:** more entries in the dat, and folder markers show up in listings and counts. Some third-party dat validators flag them as odd — they are not.
+
+---
+
+### Choosing quickly
+
+| Your situation | Structure |
+|---|---|
+| Anything Zipped | **Standard** (the only option) |
+| Standard ROM sets — No-Intro, Redump, TOSEC | **Standard** |
+| You want the dat to mirror your folder tree | **Standard** |
+| Each top-level folder is one title you want reported as one set | **Grouped** |
+| Multi-disc / bundled-extras releases | **Grouped** |
+| Empty folders must survive | **Grouped + Folders** |
+| Software that needs its directory tree intact to run | **Grouped + Folders** |
+
+All three describe the same files with the same hashes. Switching structure changes how RomVault *groups and reports* them — never which files are tracked.
+
+---
+
+## Why there is no "Dirs" structure or "Legacy" format
+
+Earlier versions offered a fourth structure ("Dirs") and a Modern/Legacy format switch. Both wrote `<rom>` entries inside `<dir>` tags, and **RomVault cannot read those at all.**
+
+RomVault's parser only ever looks for a fixed set of child elements:
+
+| Element | Children RomVault reads |
+|---|---|
+| `<datafile>` | `dir`, `game`, `machine`, `rom`, `disk` |
+| `<dir>` | `dir`, `game`, `machine` — **never `rom`** |
+| `<game>` / `<machine>` | `rom`, `disk` + metadata — **never `dir` or `game`** |
+
+So a `<dir>` is a container of *sets*, and a `<game>` is a container of *files*. A subfolder inside a set has exactly one valid encoding — a `/` inside the rom's name — which RomVault expands back into a folder tree when it loads the dat. Anything outside that grammar is **silently discarded**: RomVault does not warn, it simply loads nothing, and then offers to relocate the files it cannot account for.
+
+Dats written with the old "Dirs" structure or the "Legacy" format therefore loaded into RomVault as completely empty. Both were removed rather than left as traps; if your saved settings used either, the app moves you to the nearest valid choice and says so in the activity log.
+
+If you need a dat for ClrMamePro or another toolchain that wants that older shape, use a purpose-built converter — this tool targets RomVault.
+
+The **Use `<machine>` instead of `<game>`** option remains available. It is the element name used by EmuMovies and some MAME-derived dats; RomVault reads `<machine>` and `<game>` identically. Unless you specifically need it, leave it set to `<game>`.
 
 ---
 
@@ -632,7 +726,7 @@ To understand how the datfiles produced by this tool relate to the wider landsca
 | ClrMamePro text format | 134 | **1.3%** |
 | Flat ROMs only (no `<game>` wrapper) | 3 | **~0%** |
 
-**The standard Logiqx structure at depth 3 accounts for nearly 97.7% of all XML datfiles in the core collection.** This is the structure produced by No-Intro, Redump, TOSEC, GoodMerge, and the vast majority of community dat projects. It is what this tool produces in Zipped mode with Structure 1 (Archives as Games).
+**The standard Logiqx structure at depth 3 accounts for nearly 97.7% of all XML datfiles in the core collection.** This is the structure produced by No-Intro, Redump, TOSEC, GoodMerge, and the vast majority of community dat projects. It is what this tool produces in Zipped mode, which always uses the Standard structure.
 
 ### The `forcepacking` Values in the Wild
 
@@ -737,13 +831,13 @@ Only `<game>` entries can be fixed (have files moved into them from the ToSort f
 - **The `forcepacking="unzip"` and `forcepacking="zip"` values are not generated.** Only `fileonly` (Mixed) and absent (Zipped) are produced.
 - **`<softwarelist>` and MAME XML formats are not produced.**
 - **Incremental update Mixed mode cannot detect same-name same-size file replacements.** The Pre-flight Check dialog warns of this and offers a full rehash.
-- **The Recursive Archive Extractor and Remove ReadOnly tools are Windows-only.** The core dat generation engine and all other tools run on both Windows and Linux; these two rely on Windows-specific facilities (the Windows shell Recycle Bin and PowerShell `Unblock-File`).
+- **Windows only.** Datfile Creator Studio is developed, tested, and supported exclusively on Windows. There are no Linux or macOS builds, and none are planned.
 
 ---
 
 ## Parity
 
-The engine is a faithful port of the original Python suite, and that claim is enforced. `tools/parity/compare.ps1` runs both engines over the same test collection — including deterministic RVZSTD archives with zero-byte files, empty folders, and nested empty folders — and compares every output **byte for byte**. The matrix covers both dat types across all three generation modes and all four structures, the legacy/`<machine>` variants, every hash (BLAKE3 included), extension filters, incremental update, the folder analyzer's recommendations, and the dat-writing tools (Merge, Header Updater, Counter, Validate). All checks pass byte-identical.
+The engine is a faithful port of the original Python suite, and that claim is enforced. `tools/parity/compare.ps1` runs both engines over the same test collection — including deterministic RVZSTD archives with zero-byte files, empty folders, and nested empty folders — and compares every output **byte for byte**. The matrix covers both dat types across all three generation modes and every structure, the `<machine>` variant, every hash (BLAKE3 included), extension filters, incremental update, the folder analyzer's recommendations, and the dat-writing tools (Merge, Header Updater, Counter, Validate). All checks pass byte-identical.
 
 ---
 

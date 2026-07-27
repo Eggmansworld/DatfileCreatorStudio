@@ -1,0 +1,223 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="DatfileCreatorStudio.Views.StructureGuideWindow"
+        Title="Structure Guide"
+        Width="900" Height="820"
+        MinWidth="720" MinHeight="520"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppContentBackground}">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.h1">
+            <Setter Property="FontSize" Value="21"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="TextBlock.h2">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource AppAccentBarBrush}"/>
+        </Style>
+        <Style Selector="TextBlock.lead">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.body">
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style Selector="SelectableTextBlock.code">
+            <Setter Property="FontFamily" Value="Cascadia Mono,Consolas,DejaVu Sans Mono,Liberation Mono,monospace"/>
+            <Setter Property="FontSize" Value="11.5"/>
+        </Style>
+        <Style Selector="Border.codebox">
+            <Setter Property="Background" Value="{DynamicResource AppLogBackground}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+    </Window.Styles>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource AppBarBackground}"
+                BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+                Padding="16,10">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Grid.Column="0" Classes="body" VerticalAlignment="Center"
+                           Foreground="{DynamicResource AppSubtleTextBrush}"
+                           Text="All three describe the same files with the same hashes — structure changes how RomVault groups and reports them, never which files are tracked."/>
+                <Button Grid.Column="1" Classes="accent" Content="Close" Padding="18,7" Click="OnClose"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Padding="26,22">
+            <StackPanel Spacing="16" MaxWidth="820" HorizontalAlignment="Left">
+
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h1" Text="Structure Options"/>
+                    <TextBlock Classes="body"
+                               Text="Structure answers one question: where does a single dat entry begin?"/>
+                    <TextBlock Classes="body"
+                               Text="Every dat is a list of sets (&lt;game&gt; entries). A set is the unit RomVault matches, fixes and reports on. The three structures differ only in where they draw the boundary of a set — at each archive, or at each top-level folder."/>
+                    <TextBlock Classes="body" Foreground="{DynamicResource AppSubtleTextBrush}"
+                               Text="Zipped dats always use Standard. In a dat a game resolves to a physical archive, so naming a folder that holds several separate zips as one set would claim an archive exists that does not — and RomVault would offer to repack your collection into it."/>
+                </StackPanel>
+
+                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                <!-- Example collection -->
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h2" Text="The example collection"/>
+                    <TextBlock Classes="body"
+                               Text="All three examples below describe this same input folder, scanned as Mixed:"/>
+                    <Border Classes="codebox">
+                        <SelectableTextBlock Classes="code" xml:space="preserve">Crime Wave Collection\
+    readme.txt                            ← loose file at the top level
+    Crime Wave (1990)\                    ← holds files AND a subfolder
+        Crime Wave (Disk A).ima
+        Crime Wave (Disk B).ima
+        original\
+            Crime Wave (v1.0).ima
+        saves\                            ← EMPTY folder
+    Deluxe Paint IV\                      ← holds files only
+        DPaint4.adf
+    Documentation\                        ← container: no files of its own
+        Box Scans\
+            Crime Wave Box.png
+        Manuals\
+            Crime Wave Manual.pdf</SelectableTextBlock>
+                    </Border>
+                    <TextBlock Classes="body"
+                               Text="Two features of this layout tell the structures apart. Documentation\ holds no files itself, only subfolders — Standard keeps it as a browsable directory, Grouped turns it into a single set. And saves\ is empty: only Grouped + Folders records it, because a dat with no entry for a folder has no way to say that folder exists."/>
+                </StackPanel>
+
+                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                <!-- Standard -->
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h2" Text="Standard"/>
+                    <TextBlock Classes="lead"
+                               Text="One set per archive — or per folder that directly holds files. The folders above stay as directories."/>
+                    <TextBlock Classes="body"
+                               Text="The default, and what No-Intro, Redump, TOSEC and the overwhelming majority of community dats use. It mirrors your collection: a set appears wherever the content actually lives, however deep that happens to be. A folder containing files becomes a set; a folder containing only other folders stays a dir you can expand in RomVault, and the search continues inside it."/>
+                    <Border Classes="codebox">
+                        <SelectableTextBlock Classes="code" xml:space="preserve">&lt;rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/&gt;
+&lt;game name="Crime Wave (1990)"&gt;
+    &lt;rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" .../&gt;
+    &lt;rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" .../&gt;
+    &lt;rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" .../&gt;
+&lt;/game&gt;
+&lt;game name="Deluxe Paint IV"&gt;
+    &lt;rom name="DPaint4.adf" size="3" crc="be1437ad" .../&gt;
+&lt;/game&gt;
+&lt;dir name="Documentation"&gt;
+    &lt;game name="Box Scans"&gt;
+        &lt;rom name="Crime Wave Box.png" size="4" crc="c4b3b3ae" .../&gt;
+    &lt;/game&gt;
+    &lt;game name="Manuals"&gt;
+        &lt;rom name="Crime Wave Manual.pdf" size="3" crc="69a297d8" .../&gt;
+    &lt;/game&gt;
+&lt;/dir&gt;</SelectableTextBlock>
+                    </Border>
+                    <TextBlock Classes="body"
+                               Text="RomVault shows 4 sets, with Documentation as a folder you can open to find Box Scans and Manuals inside it as separate sets. readme.txt sits at the top as a loose file, exactly where it is on disk. Note original/Crime Wave (v1.0).ima — a subfolder inside a set can only be expressed as a path in the rom name, and RomVault rebuilds it into a real folder on load."/>
+                    <TextBlock Classes="label" Text="Use it when: almost always — and you must use it for Zipped dats."/>
+                    <TextBlock Classes="body" Foreground="{DynamicResource AppSubtleTextBrush}"
+                               Text="Trade-off: a title split across subfolders becomes several separate sets rather than one."/>
+                </StackPanel>
+
+                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                <!-- Grouped -->
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h2" Text="Grouped                                    (Mixed dats only)"/>
+                    <TextBlock Classes="lead"
+                               Text="One set per top-level folder. Everything inside is gathered into that single set, with folder paths kept in the rom names."/>
+                    <TextBlock Classes="body"
+                               Text="Grouped draws the set boundary at a fixed depth: every first-level folder becomes exactly one set, whether or not it holds files directly. Nothing below that level appears as a separate entry — it is folded into the parent with its path preserved. Compare against Standard: Documentation is no longer a directory containing two sets, it is now one set whose contents happen to live in subfolders."/>
+                    <Border Classes="codebox">
+                        <SelectableTextBlock Classes="code" xml:space="preserve">&lt;rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/&gt;
+&lt;game name="Crime Wave (1990)"&gt;
+    &lt;rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" .../&gt;
+    &lt;rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" .../&gt;
+    &lt;rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" .../&gt;
+&lt;/game&gt;
+&lt;game name="Deluxe Paint IV"&gt;
+    &lt;rom name="DPaint4.adf" size="3" crc="be1437ad" .../&gt;
+&lt;/game&gt;
+&lt;game name="Documentation"&gt;
+    &lt;rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" .../&gt;
+    &lt;rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" .../&gt;
+&lt;/game&gt;</SelectableTextBlock>
+                    </Border>
+                    <TextBlock Classes="body"
+                               Text="RomVault shows 3 sets — one per top-level folder — with no intermediate directories to expand. Every file is still tracked at its exact path; only the grouping changed."/>
+                    <TextBlock Classes="label"
+                               Text="Use it when: each top-level folder is one release you want reported as one thing — multi-disc games, releases bundled with extras or goodies packs, anything where &quot;is this title complete?&quot; is the real question."/>
+                    <TextBlock Classes="body" Foreground="{DynamicResource AppSubtleTextBrush}"
+                               Text="Trade-off: empty folders disappear. A dat can only mention a folder through a rom entry, and Grouped writes none — so saves\ is simply absent and RomVault will not recreate it."/>
+                </StackPanel>
+
+                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                <!-- Grouped + Folders -->
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h2" Text="Grouped + Folders                          (Mixed dats only)"/>
+                    <TextBlock Classes="lead"
+                               Text="Grouped, plus the folder layout recorded. Empty folders survive."/>
+                    <TextBlock Classes="body"
+                               Text="Identical to Grouped in how it groups sets — the difference is that it also writes a zero-size marker entry for every subfolder, giving the dat a way to state &quot;this folder exists&quot; independently of whether anything is inside it. Look for original/, saves/, Box Scans/ and Manuals/ below. saves/ is the interesting one: it is empty, and this is the only structure that preserves it."/>
+                    <Border Classes="codebox">
+                        <SelectableTextBlock Classes="code" xml:space="preserve">&lt;rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/&gt;
+&lt;game name="Crime Wave (1990)"&gt;
+    &lt;rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" .../&gt;
+    &lt;rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" .../&gt;
+    &lt;rom name="original/" size="0" crc="00000000"/&gt;
+    &lt;rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" .../&gt;
+    &lt;rom name="saves/" size="0" crc="00000000"/&gt;
+&lt;/game&gt;
+&lt;game name="Deluxe Paint IV"&gt;
+    &lt;rom name="DPaint4.adf" size="3" crc="be1437ad" .../&gt;
+&lt;/game&gt;
+&lt;game name="Documentation"&gt;
+    &lt;rom name="Box Scans/" size="0" crc="00000000"/&gt;
+    &lt;rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" .../&gt;
+    &lt;rom name="Manuals/" size="0" crc="00000000"/&gt;
+    &lt;rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" .../&gt;
+&lt;/game&gt;</SelectableTextBlock>
+                    </Border>
+                    <TextBlock Classes="body"
+                               Text="RomVault shows the same 3 sets as Grouped, and additionally recreates every folder — including saves\, which holds nothing. The marker entries are not files and never report as missing; they exist purely to carry the folder structure. This is RomVault's own convention, not an invention of this tool: RomVault writes exactly these markers itself when it flattens an archive."/>
+                    <TextBlock Classes="label"
+                               Text="Use it when: the folder layout is part of what you are preserving — software that needs a specific directory tree to run, emulator or system installs with expected empty folders, archival projects where the structure itself is data."/>
+                    <TextBlock Classes="body" Foreground="{DynamicResource AppSubtleTextBrush}"
+                               Text="Trade-off: more entries in the dat, and folder markers show up in listings and counts. Some third-party validators flag them as odd — they are not."/>
+                </StackPanel>
+
+                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
+
+                <!-- Cheat sheet -->
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="h2" Text="Choosing quickly"/>
+                    <Border Classes="codebox">
+                        <SelectableTextBlock Classes="code" xml:space="preserve">Anything Zipped                                    →  Standard  (only option)
+Standard ROM sets — No-Intro, Redump, TOSEC        →  Standard
+You want the dat to mirror your folder tree        →  Standard
+
+Each top-level folder is one title, reported once  →  Grouped
+Multi-disc / bundled-extras releases               →  Grouped
+
+Empty folders must survive                         →  Grouped + Folders
+Software that needs its directory tree intact      →  Grouped + Folders</SelectableTextBlock>
+                    </Border>
+                </StackPanel>
+
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</Window>

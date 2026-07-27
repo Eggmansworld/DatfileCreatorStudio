@@ -4,7 +4,7 @@ namespace DatfileCreator.Core;
 /// All options for a dat generation run. Field meanings and defaults are
 /// identical to the Python suite's Settings dataclass; string enums use the
 /// same tokens ("mixed"/"zipped", "per_top"/"per_root"/"per_all",
-/// "opt1".."opt4", "legacy"/"modern") so saved configs stay interchangeable.
+/// "opt2".."opt4") so saved configs stay interchangeable.
 /// </summary>
 public sealed class DatSettings
 {
@@ -31,13 +31,13 @@ public sealed class DatSettings
     /// <summary>"per_top" | "per_root" | "per_all"</summary>
     public string GenMode { get; set; } = "per_root";
 
-    /// <summary>"opt1" (Dirs, legacy) | "opt2" (Archives as Games) | "opt3" | "opt4"</summary>
+    /// <summary>
+    /// "opt2" ("Standard") | "opt3" ("Grouped") | "opt4" ("Grouped + Folders").
+    /// The old "opt1" ("Dirs") is retired:
+    /// it wrote rom entries inside dir tags, which RomVault never reads.
+    /// </summary>
     public string Structure { get; set; } = "opt2";
 
-    /// <summary>"legacy" | "modern"</summary>
-    public string DatFormat { get; set; } = "modern";
-
-    // Modern-only
     public bool UseMachine { get; set; }
     public bool InclGameDesc { get; set; } = true;
 

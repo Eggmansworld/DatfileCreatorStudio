@@ -238,7 +238,6 @@ var settings = new DatSettings
     DatType = Str("dat_type", "mixed"),
     GenMode = Str("gen_mode", "per_root"),
     Structure = Str("structure", "opt2"),
-    DatFormat = Str("dat_format", "modern"),
     UseMachine = Flag("use_machine"),
     InclGameDesc = Flag("incl_game_desc", true),
     ForcePacking = Flag("forcepacking", true),
@@ -282,7 +281,7 @@ if (previewDir is not null && previews is not null)
     Directory.CreateDirectory(previewDir);
     foreach (var entry in previews)
     {
-        foreach (string opt in (string[])["opt1", "opt2", "opt3", "opt4"])
+        foreach (string opt in (string[])["opt2", "opt3", "opt4"])
         {
             string xml = PreviewRenderer.Render(entry, opt);
             string name = $"{XmlText.SafeFilename(entry.DatName)}__{opt}.xml";

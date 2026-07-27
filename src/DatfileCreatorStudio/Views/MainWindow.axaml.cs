@@ -171,6 +171,9 @@ public partial class MainWindow : Window
     private void OnOpenAbout(object? sender, RoutedEventArgs e) =>
         new AboutWindow().ShowDialog(this);
 
+    private void OnOpenStructureGuide(object? sender, RoutedEventArgs e) =>
+        new StructureGuideWindow().Show(this);
+
     private void OnOpenRainbowControls(object? sender, RoutedEventArgs e)
     {
         if (ViewModel is { } vm)

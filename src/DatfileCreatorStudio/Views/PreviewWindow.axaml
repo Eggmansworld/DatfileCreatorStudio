@@ -37,14 +37,17 @@
             <StackPanel Orientation="Horizontal" Spacing="18">
                 <TextBlock Text="Structure:" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Center"
                            ToolTip.Tip="Re-renders the selected dat instantly from in-memory hash data — no re-hashing. Compare the options side-by-side before committing to one for a project."/>
-                <RadioButton Classes="opt" GroupName="pvStruct" Content="1 — Dirs"
-                             IsChecked="{Binding StructOpt1}"/>
-                <RadioButton Classes="opt" GroupName="pvStruct" Content="2 — Archives as Games"
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="Standard"
                              IsChecked="{Binding StructOpt2}"/>
-                <RadioButton Classes="opt" GroupName="pvStruct" Content="3 — First Level Dirs as Games"
-                             IsChecked="{Binding StructOpt3}"/>
-                <RadioButton Classes="opt" GroupName="pvStruct" Content="4 — First Level Dirs as Games + Merge Dirs in Games"
-                             IsChecked="{Binding StructOpt4}"/>
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="Grouped"
+                             IsChecked="{Binding StructOpt3}"
+                             IsEnabled="{Binding AreFolderStructuresAvailable}"/>
+                <RadioButton Classes="opt" GroupName="pvStruct" Content="Grouped + Folders"
+                             IsChecked="{Binding StructOpt4}"
+                             IsEnabled="{Binding AreFolderStructuresAvailable}"/>
+                <TextBlock Classes="subtle" FontSize="11" VerticalAlignment="Center"
+                           IsVisible="{Binding !AreFolderStructuresAvailable}"
+                           Text="(Zipped dats always use Standard)"/>
             </StackPanel>
         </Border>
 

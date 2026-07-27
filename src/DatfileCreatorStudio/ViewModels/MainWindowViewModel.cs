@@ -45,14 +45,11 @@ public partial class MainWindowViewModel : ViewModelBase
         _genPerAll = d.GenMode == "per_all";
         if (!_genPerTop && !_genPerRoot && !_genPerAll)
             _genPerRoot = true;
-        _structOpt1 = d.Structure == "opt1";
         _structOpt2 = d.Structure == "opt2";
         _structOpt3 = d.Structure == "opt3";
         _structOpt4 = d.Structure == "opt4";
-        if (!_structOpt1 && !_structOpt2 && !_structOpt3 && !_structOpt4)
+        if (!_structOpt2 && !_structOpt3 && !_structOpt4)
             _structOpt2 = true;
-        _formatModern = d.DatFormat != "legacy";
-        _formatLegacy = !_formatModern;
         _useMachine = d.UseMachine;
         _inclGameDesc = d.InclGameDesc;
         _forcePacking = d.ForcePacking;
@@ -82,6 +79,11 @@ public partial class MainWindowViewModel : ViewModelBase
         _soundFile = snd.FilePath;
 
         Drawer.ReportInfo($"Config: {SettingsService.ConfigPath}");
+
+        // Retired settings remapped on load — say so rather than changing the
+        // user's configuration behind their back.
+        foreach (string note in settings.MigrationNotes)
+            Drawer.Append(LogKind.Phase, "NOTE: " + note);
     }
 
     // ── Paths & header fields ────────────────────────────────────────────
@@ -101,15 +103,38 @@ public partial class MainWindowViewModel : ViewModelBase
     // ── Dat type ─────────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMixed), nameof(IsZipped))]
+    [NotifyPropertyChangedFor(nameof(IsMixed), nameof(IsZipped), nameof(AreFolderStructuresAvailable))]
     private bool _datTypeMixed;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMixed), nameof(IsZipped))]
+    [NotifyPropertyChangedFor(nameof(IsMixed), nameof(IsZipped), nameof(AreFolderStructuresAvailable))]
     private bool _datTypeZipped;
 
     public bool IsMixed => DatTypeMixed;
     public bool IsZipped => DatTypeZipped;
+
+    /// <summary>
+    /// The two "first level dirs as games" structures only make sense for Mixed
+    /// dats. In a Zipped dat a game resolves to a physical archive, so naming a
+    /// folder of separate zips as one game would describe an archive that does
+    /// not exist — RomVault would offer to repack the collection into it.
+    /// </summary>
+    public bool AreFolderStructuresAvailable => DatTypeMixed;
+
+    partial void OnDatTypeZippedChanged(bool value)
+    {
+        // Zipped has exactly one valid structure; don't leave an impossible
+        // choice selected behind a disabled radio button.
+        if (value && (StructOpt3 || StructOpt4))
+        {
+            StructOpt3 = false;
+            StructOpt4 = false;
+            StructOpt2 = true;
+            Drawer.ReportInfo(
+                "Switched to the Standard structure — it is the only one valid for Zipped dats, "
+                + "where each archive is its own game entry.");
+        }
+    }
 
     // ── Generation mode ──────────────────────────────────────────────────
 
@@ -123,24 +148,11 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Structure applies to the two recursive modes; per_all dats are flat by definition.</summary>
     public bool IsStructureEnabled => !GenPerAll;
 
-    // ── Structure (README numbering: 1=opt2, 2=opt3, 3=opt4, 4=opt1) ─────
+    // ── Structure (README numbering: 1=opt2, 2=opt3, 3=opt4) ─────────────
 
-    [ObservableProperty] private bool _structOpt1;
     [ObservableProperty] private bool _structOpt2;
     [ObservableProperty] private bool _structOpt3;
     [ObservableProperty] private bool _structOpt4;
-
-    // ── Format ───────────────────────────────────────────────────────────
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsModern))]
-    private bool _formatModern;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsModern))]
-    private bool _formatLegacy;
-
-    public bool IsModern => FormatModern;
 
     [ObservableProperty] private bool _useMachine;
     [ObservableProperty] private bool _inclGameDesc;
@@ -321,8 +333,7 @@ public partial class MainWindowViewModel : ViewModelBase
         d.Comment = Comment;
         d.DatType = DatTypeMixed ? "mixed" : "zipped";
         d.GenMode = GenPerTop ? "per_top" : GenPerAll ? "per_all" : "per_root";
-        d.Structure = StructOpt1 ? "opt1" : StructOpt3 ? "opt3" : StructOpt4 ? "opt4" : "opt2";
-        d.DatFormat = FormatLegacy ? "legacy" : "modern";
+        d.Structure = StructOpt3 ? "opt3" : StructOpt4 ? "opt4" : "opt2";
         d.UseMachine = UseMachine;
         d.InclGameDesc = InclGameDesc;
         d.ForcePacking = ForcePacking;
@@ -411,7 +422,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var previews = new List<PreviewEntry>();
 
         string summary = $"{(runSettings.IsMixed ? "Mixed" : "Zipped")} | {runSettings.GenMode} | "
-                       + $"{runSettings.Structure} | {runSettings.DatFormat}"
+                       + $"{runSettings.Structure}"
                        + (runSettings.Incremental ? " | incremental" : "")
                        + $" | in: {runSettings.InputRoot} | out: {runSettings.OutputRoot}";
         Drawer.OnRunStarted(summary);

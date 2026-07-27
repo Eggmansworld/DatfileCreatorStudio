@@ -11,14 +11,14 @@ namespace DatfileCreatorStudio.ViewModels;
 /// </summary>
 public partial class PreviewWindowViewModel : ViewModelBase
 {
-    // Same labels as the suite's preview window (its own numbering, which
-    // intentionally differs from the main window's README-style numbering)
+    // Names match the main window's Structure radios exactly — the suite used
+    // its own numbering here, so the preview named a structure the user could
+    // not find on the main window.
     private static readonly (string Key, string Label)[] StructOpts =
     [
-        ("opt1", "1 — Dirs"),
-        ("opt2", "2 — Archives as Games"),
-        ("opt3", "3 — First Level Dirs as Games"),
-        ("opt4", "4 — First Level Dirs as Games + Merge Dirs in Games"),
+        ("opt2", "Standard"),
+        ("opt3", "Grouped"),
+        ("opt4", "Grouped + Folders"),
     ];
 
     private readonly List<PreviewEntry> _entries;
@@ -33,16 +33,14 @@ public partial class PreviewWindowViewModel : ViewModelBase
 
         // Start on the structure the run actually used
         string initial = entries.Count > 0 ? entries[0].Settings.Structure : "opt2";
-        _structOpt1 = initial == "opt1";
-        _structOpt2 = initial == "opt2";
         _structOpt3 = initial == "opt3";
         _structOpt4 = initial == "opt4";
+        _structOpt2 = !_structOpt3 && !_structOpt4;
         _selectedIndex = entries.Count > 0 ? 0 : -1;
         Rerender();
     }
 
     [ObservableProperty] private int _selectedIndex;
-    [ObservableProperty] private bool _structOpt1;
     [ObservableProperty] private bool _structOpt2;
     [ObservableProperty] private bool _structOpt3;
     [ObservableProperty] private bool _structOpt4;
@@ -51,7 +49,6 @@ public partial class PreviewWindowViewModel : ViewModelBase
     [ObservableProperty] private string _infoText = "";
 
     partial void OnSelectedIndexChanged(int value) => Rerender();
-    partial void OnStructOpt1Changed(bool value) { if (value) Rerender(); }
     partial void OnStructOpt2Changed(bool value) { if (value) Rerender(); }
     partial void OnStructOpt3Changed(bool value) { if (value) Rerender(); }
     partial void OnStructOpt4Changed(bool value) { if (value) Rerender(); }
@@ -59,8 +56,15 @@ public partial class PreviewWindowViewModel : ViewModelBase
     public PreviewEntry? Current =>
         SelectedIndex >= 0 && SelectedIndex < _entries.Count ? _entries[SelectedIndex] : null;
 
+    /// <summary>
+    /// The folder-based structures are Mixed-only, so they are not offered for a
+    /// Zipped dat — comparing against a shape that could never be written would
+    /// only mislead.
+    /// </summary>
+    public bool AreFolderStructuresAvailable => Current?.Settings.IsMixed ?? true;
+
     public string CurrentStructure =>
-        StructOpt1 ? "opt1" : StructOpt3 ? "opt3" : StructOpt4 ? "opt4" : "opt2";
+        StructOpt3 ? "opt3" : StructOpt4 ? "opt4" : "opt2";
 
     public string CurrentStructureLabel =>
         StructOpts.First(o => o.Key == CurrentStructure).Label;
@@ -73,11 +77,21 @@ public partial class PreviewWindowViewModel : ViewModelBase
 
     private void Rerender()
     {
+        OnPropertyChanged(nameof(AreFolderStructuresAvailable));
         if (Current is not { } entry)
         {
             XmlText = "";
             InfoText = "No completed dats to preview.";
             return;
+        }
+        // A Zipped dat has only one valid shape; snap back rather than render
+        // something the writer would never produce.
+        if (!entry.Settings.IsMixed && (StructOpt3 || StructOpt4))
+        {
+            StructOpt3 = false;
+            StructOpt4 = false;
+            StructOpt2 = true;
+            return; // the StructOpt2 change re-enters Rerender
         }
         string xml = PreviewRenderer.Render(entry, CurrentStructure);
         int romCount = xml.Split("<rom ").Length - 1;

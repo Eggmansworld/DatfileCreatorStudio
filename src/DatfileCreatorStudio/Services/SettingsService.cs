@@ -68,6 +68,12 @@ public sealed class SettingsService
 
     public AppConfig Config { get; private set; } = new();
 
+    /// <summary>
+    /// Messages about retired settings that were remapped during <see cref="Load"/>,
+    /// surfaced in the activity log so the change is visible rather than silent.
+    /// </summary>
+    public List<string> MigrationNotes { get; } = [];
+
     /// <summary>The single portable config file, next to DatfileCreatorStudio.exe</summary>
     public static string ConfigPath =>
         Path.Combine(AppContext.BaseDirectory, "DatfileCreatorStudio.config");
@@ -77,7 +83,11 @@ public sealed class SettingsService
         try
         {
             if (File.Exists(ConfigPath))
-                Config = JsonSerializer.Deserialize<AppConfig>(File.ReadAllText(ConfigPath)) ?? new AppConfig();
+            {
+                string json = File.ReadAllText(ConfigPath);
+                Config = JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+                MigrateRetiredSettings(json);
+            }
         }
         catch
         {
@@ -88,6 +98,42 @@ public sealed class SettingsService
         Config.Dat.Date = "";
         // Same clamp the suite applies when loading
         Config.Dat.Threads = Math.Clamp(Config.Dat.Threads, 1, 8);
+    }
+
+    /// <summary>
+    /// Move configs off the two retired settings. Both the "Dirs" structure and
+    /// the "legacy" format wrote rom entries inside dir tags, which RomVault's
+    /// parser never reads — dats written either way load as completely empty.
+    /// The format is gone from AppConfig entirely, so it is detected from the
+    /// raw JSON purely to tell the user why their setting changed.
+    /// </summary>
+    private void MigrateRetiredSettings(string json)
+    {
+        if (Config.Dat.Structure == "opt1")
+        {
+            Config.Dat.Structure = "opt2";
+            MigrationNotes.Add(
+                "The 'Dirs' structure has been retired — RomVault reads no roms at all from dats "
+                + "written that way. Switched to the Standard structure.");
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.TryGetProperty("Dat", out var dat)
+                && dat.TryGetProperty("DatFormat", out var fmt)
+                && fmt.ValueKind == JsonValueKind.String
+                && string.Equals(fmt.GetString(), "legacy", StringComparison.OrdinalIgnoreCase))
+            {
+                MigrationNotes.Add(
+                    "The Legacy dat format has been retired — RomVault reads no roms at all from "
+                    + "legacy-format dats. Now always writing the Modern format.");
+            }
+        }
+        catch
+        {
+            // Only used to explain a change to the user — never worth failing over.
+        }
     }
 
     public void Save()

@@ -17,7 +17,6 @@ public sealed class AnalyzerRecommendation
 {
     public string GenMode { get; set; } = "per_root";
     public string Structure { get; set; } = "opt2";
-    public string DatFormat { get; set; } = "modern";
     public bool InclDesc { get; set; } = true;
     public string Confidence { get; set; } = "high";
     public string Summary { get; set; } = "";
@@ -256,12 +255,21 @@ public static partial class FolderAnalysis
                 + "becomes one self-contained dat.");
         }
 
-        // Structure
-        if (maxD <= 2 && containers == 0 && nested == 0)
+        // Structure. The folder-based structures are Mixed-only — in a Zipped
+        // dat a game resolves to a physical archive, so Standard is
+        // the only shape that describes the collection truthfully.
+        if (f.DatType == "zipped")
+        {
+            rec.Structure = "opt2";
+            detail.Add("Zipped collection: the Standard structure — each archive "
+                + "becomes its own game entry and physical folders become <dir> entries. "
+                + "Standard is the only structure valid for Zipped dats.");
+        }
+        else if (maxD <= 2 && containers == 0 && nested == 0)
         {
             rec.Structure = "opt2";
             detail.Add("Content is flat or has at most one level of subdirectories. "
-                + "Structure 2 (Archives as Games) is the standard choice — "
+                + "the Standard structure is the right choice — "
                 + cw + " become <game> entries, physical subdirs become <dir> entries.");
         }
         else if (maxD <= 2 && containers > 0)
@@ -270,7 +278,7 @@ public static partial class FolderAnalysis
             rec.Confidence = "medium";
             detail.Add(containers + " of " + n + " top-level folder(s) act as containers "
                 + "(no " + cw + " directly, only subfolders). "
-                + "Structure 2 handles this correctly: game folders become <game> entries, "
+                + "the Standard structure handles this correctly: game folders become <game> entries, "
                 + "container folders become <dir> entries.");
         }
         else if (maxD >= 3 && nested > n / 2)
@@ -278,21 +286,21 @@ public static partial class FolderAnalysis
             rec.Structure = "opt4";
             detail.Add("Deep structure detected (max depth " + maxD + "). "
                 + nested + " folder(s) have both direct " + cw + " AND nested subdirectories. "
-                + "Structure 4 (First Level Dirs as Games + Merge Dirs) captures this most cleanly.");
+                + "the 'Grouped + Folders' structure captures this most cleanly.");
         }
         else if (maxD >= 3 && containers > 0)
         {
             rec.Structure = "opt3";
             detail.Add("Deep structure detected (max depth " + maxD + "). "
                 + containers + " container folder(s) found. "
-                + "Structure 3 (First Level Dirs as Games) maps each top-level "
+                + "the 'Grouped' structure maps each top-level "
                 + "folder to a game entry regardless of direct content.");
         }
         else
         {
             rec.Structure = "opt2";
             detail.Add("Moderate depth (max " + maxD + " levels). "
-                + "Structure 2 (Archives as Games) is the standard choice.");
+                + "the Standard structure is the right choice.");
         }
 
         // Confidence adjustments
@@ -310,18 +318,19 @@ public static partial class FolderAnalysis
 
         if (maxD >= 5)
             f.Notes.Add("Very deep nesting detected (max " + maxD + " levels). "
-                + "Structure 4 is recommended. If your top-level subfolders each represent "
+                + "'Grouped + Folders' is recommended. If your top-level subfolders each represent "
                 + "independent sub-collections rather than a single game or title, consider "
                 + "switching Generation to '1 dat per root folder & all subfolders "
                 + "(TOSEC style)' so each "
                 + "subfolder gets its own separate dat file.");
 
+        // These must match the numbering on the main window's Structure radios,
+        // otherwise the advice names a button the user cannot find.
         var structLabels = new Dictionary<string, string>
         {
-            ["opt1"] = "Structure 1 (Dirs)",
-            ["opt2"] = "Structure 2 (Archives as Games)",
-            ["opt3"] = "Structure 3 (First Level Dirs as Games)",
-            ["opt4"] = "Structure 4 (First Level Dirs + Merge Dirs)",
+            ["opt2"] = "Standard",
+            ["opt3"] = "Grouped",
+            ["opt4"] = "Grouped + Folders",
         };
         string modeLabel = rec.GenMode switch
         {
