@@ -310,7 +310,7 @@ public static class IncrementalUpdate
 
                 if (folderSubdirs.Contains(gname))
                 {
-                    // Folder-based Mixed (Grouped / Grouped + Folders): game = subfolder;
+                    // Folder-based Mixed (Grouped): game = subfolder;
                     // fully matched only when every listed rom file is present
                     var subFiles = new HashSet<string>(StringComparer.Ordinal);
                     try

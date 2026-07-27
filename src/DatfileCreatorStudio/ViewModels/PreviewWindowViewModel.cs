@@ -18,7 +18,6 @@ public partial class PreviewWindowViewModel : ViewModelBase
     [
         ("opt2", "Standard"),
         ("opt3", "Grouped"),
-        ("opt4", "Grouped + Folders"),
     ];
 
     private readonly List<PreviewEntry> _entries;
@@ -34,8 +33,7 @@ public partial class PreviewWindowViewModel : ViewModelBase
         // Start on the structure the run actually used
         string initial = entries.Count > 0 ? entries[0].Settings.Structure : "opt2";
         _structOpt3 = initial == "opt3";
-        _structOpt4 = initial == "opt4";
-        _structOpt2 = !_structOpt3 && !_structOpt4;
+        _structOpt2 = !_structOpt3;
         _selectedIndex = entries.Count > 0 ? 0 : -1;
         Rerender();
     }
@@ -43,7 +41,6 @@ public partial class PreviewWindowViewModel : ViewModelBase
     [ObservableProperty] private int _selectedIndex;
     [ObservableProperty] private bool _structOpt2;
     [ObservableProperty] private bool _structOpt3;
-    [ObservableProperty] private bool _structOpt4;
 
     [ObservableProperty] private string _xmlText = "";
     [ObservableProperty] private string _infoText = "";
@@ -51,7 +48,6 @@ public partial class PreviewWindowViewModel : ViewModelBase
     partial void OnSelectedIndexChanged(int value) => Rerender();
     partial void OnStructOpt2Changed(bool value) { if (value) Rerender(); }
     partial void OnStructOpt3Changed(bool value) { if (value) Rerender(); }
-    partial void OnStructOpt4Changed(bool value) { if (value) Rerender(); }
 
     public PreviewEntry? Current =>
         SelectedIndex >= 0 && SelectedIndex < _entries.Count ? _entries[SelectedIndex] : null;
@@ -63,8 +59,7 @@ public partial class PreviewWindowViewModel : ViewModelBase
     /// </summary>
     public bool AreFolderStructuresAvailable => Current?.Settings.IsMixed ?? true;
 
-    public string CurrentStructure =>
-        StructOpt3 ? "opt3" : StructOpt4 ? "opt4" : "opt2";
+    public string CurrentStructure => StructOpt3 ? "opt3" : "opt2";
 
     public string CurrentStructureLabel =>
         StructOpts.First(o => o.Key == CurrentStructure).Label;
@@ -86,10 +81,9 @@ public partial class PreviewWindowViewModel : ViewModelBase
         }
         // A Zipped dat has only one valid shape; snap back rather than render
         // something the writer would never produce.
-        if (!entry.Settings.IsMixed && (StructOpt3 || StructOpt4))
+        if (!entry.Settings.IsMixed && StructOpt3)
         {
             StructOpt3 = false;
-            StructOpt4 = false;
             StructOpt2 = true;
             return; // the StructOpt2 change re-enters Rerender
         }

@@ -4,7 +4,7 @@ namespace DatfileCreator.Core;
 /// All options for a dat generation run. Field meanings and defaults are
 /// identical to the Python suite's Settings dataclass; string enums use the
 /// same tokens ("mixed"/"zipped", "per_top"/"per_root"/"per_all",
-/// "opt2".."opt4") so saved configs stay interchangeable.
+/// "opt2"/"opt3") so saved configs stay interchangeable.
 /// </summary>
 public sealed class DatSettings
 {
@@ -32,9 +32,10 @@ public sealed class DatSettings
     public string GenMode { get; set; } = "per_root";
 
     /// <summary>
-    /// "opt2" ("Standard") | "opt3" ("Grouped") | "opt4" ("Grouped + Folders").
-    /// The old "opt1" ("Dirs") is retired:
-    /// it wrote rom entries inside dir tags, which RomVault never reads.
+    /// "opt2" ("Standard") | "opt3" ("Grouped"). Retired: "opt1" ("Dirs"),
+    /// which wrote rom entries inside dir tags that RomVault never reads, and
+    /// "opt4" ("Grouped + Folders"), whose extra folder entries RomVault
+    /// discarded — it produced the same result as "opt3".
     /// </summary>
     public string Structure { get; set; } = "opt2";
 

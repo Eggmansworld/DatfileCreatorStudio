@@ -4,7 +4,7 @@
 
 Whether you're a casual collector who just wants RomVault to recognise your files, or a preservation veteran managing hundreds of thousands of ROMs across structured archives, this tool was built for you. Point it at a folder, hit **Start**, and get clean, consistent **Logiqx XML** datfiles — no scripting, no manual XML editing, no guesswork.
 
-Bulk-generates datfiles compatible with **RomVault, ClrMamePro, and RomCenter**. Supports both **Mixed (Archive as File)** and **Zipped** collection types across three structure options, every one of them verified against RomVault's own dat parser. An incremental update engine lets you rehash only what has changed, so revisiting a large collection doesn't mean starting from scratch. CRC32 and SHA1 are always included; MD5, SHA-256, and BLAKE3 are optional. ZStandard-compressed ZIPs are fully supported.
+Bulk-generates datfiles compatible with **RomVault, ClrMamePro, and RomCenter**. Supports both **Mixed (Archive as File)** and **Zipped** collection types across two structure options, both verified against RomVault's own dat parser. An incremental update engine lets you rehash only what has changed, so revisiting a large collection doesn't mean starting from scratch. CRC32 and SHA1 are always included; MD5, SHA-256, and BLAKE3 are optional. ZStandard-compressed ZIPs are fully supported.
 
 <img width="135" height="150" alt="C# Avalonia badge_150px" src="https://github.com/user-attachments/assets/2d1356fc-4999-4205-8876-cf75e86031c5" />
 
@@ -49,7 +49,7 @@ If this tool saves you time, consider supporting the work:
   - [Zipped](#zipped)
 - [Generation Modes](#generation-modes)
 - [Structure Options](#structure-options)
-- [Why there is no "Dirs" structure or "Legacy" format](#why-there-is-no-dirs-structure-or-legacy-format)
+- [Options that were removed](#options-that-were-removed)
 - [Hash Options](#hash-options)
 - [Multithreading](#multithreading)
 - [Network Cap](#network-cap)
@@ -270,17 +270,17 @@ Use this mode for large heterogeneous collections where subfolders are logically
 
 Structure answers one question: **where does a single dat entry begin?**
 
-Every dat is a list of *sets* (`<game>` entries). A set is the unit RomVault matches, fixes and reports on. The three structures differ only in where they draw the boundary of a set — at each archive, or at each top-level folder.
+Every dat is a list of *sets* (`<game>` entries). A set is the unit RomVault matches, fixes and reports on. The two structures differ only in where they draw the boundary of a set — at each archive, or at each top-level folder.
 
 Structure applies to the two recursive (tree) modes — **1 Dat per Top-Level Folder** and **1 Dat per Root Folder** — where one dat captures nested content. In **1 dat per root folder & all subfolders**, every dat is flat by definition, so the Structure options are disabled.
 
-Use the **Preview window** to compare all three against your own data before committing — it re-renders instantly from the completed run, with no re-hashing. Not sure where to start? Run **Tools → Analyze Folder Structure** first.
+Use the **Preview window** to compare both against your own data before committing — it re-renders instantly from the completed run, with no re-hashing. Not sure where to start? Run **Tools → Analyze Folder Structure** first.
 
-> **Zipped dats always use Standard.** *Grouped* and *Grouped + Folders* are Mixed-only, and the app disables them when you select Zipped. In a dat, a `<game>` resolves to a physical *archive* — RomVault decides that once for the whole dat from the `forcepacking` header, never per entry. So naming a folder that holds several separate zips as one set would claim an archive exists that does not, and RomVault would offer to repack your collection into it. There is no way to express "this folder is the set" in a Zipped dat, so the option is not offered.
+> **Zipped dats always use Standard.** *Grouped* is Mixed-only, and the app disables it when you select Zipped. In a dat, a `<game>` resolves to a physical *archive* — RomVault decides that once for the whole dat from the `forcepacking` header, never per entry. So naming a folder that holds several separate zips as one set would claim an archive exists that does not, and RomVault would offer to repack your collection into it. There is no way to express "this folder is the set" in a Zipped dat, so the option is not offered.
 
 ### The example collection
 
-All three examples below describe this same input folder, scanned as **Mixed**:
+Both examples below describe this same input folder, scanned as **Mixed**:
 
 ```
 Crime Wave Collection\
@@ -305,7 +305,7 @@ Two features of this layout do the work of telling the structures apart:
 - **`Documentation\`** holds no files itself, only subfolders. *Standard* keeps it as a browsable directory; *Grouped* turns it into a single set.
 - **`saves\`** is empty. All three record it with an explicit folder entry — a dat has no other way to state that a folder exists, and without one RomVault would never recreate it. Zero-byte files are captured the same way, with the canonical empty-content hashes.
 
-All examples are real output from the tool, trimmed of the header.
+Both examples are real output from the tool, trimmed of the header.
 
 ---
 
@@ -390,49 +390,6 @@ Compare against Standard: `Documentation` is no longer a directory containing tw
 
 ---
 
-### Grouped + Folders
-
-> **Grouped, plus the folder layout recorded.** Empty folders survive.
-
-*Mixed dats only.*
-
-Identical to Grouped in how it groups sets. The difference is that it writes a folder entry for **every** subfolder, not only the empty ones — look for `original/`, `Box Scans/` and `Manuals/` below, which all contain files.
-
-**RomVault discards those extra entries on load**, because a folder holding files is already implied by their paths. In RomVault the result is identical to Grouped. This structure is therefore only worth choosing when something *other* than RomVault reads your dats and expects every folder listed explicitly.
-
-```xml
-<rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/>
-<game name="Crime Wave (1990)">
-    <description>Crime Wave (1990)</description>
-    <rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" sha1="15f33e58..."/>
-    <rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" sha1="554ad0c1..."/>
-    <rom name="original/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
-    <rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" sha1="85a03bae..."/>
-    <rom name="saves/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
-</game>
-<game name="Deluxe Paint IV">
-    <description>Deluxe Paint IV</description>
-    <rom name="DPaint4.adf" size="3" crc="be1437ad" sha1="2a93c572..."/>
-</game>
-<game name="Documentation">
-    <description>Documentation</description>
-    <rom name="Box Scans/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
-    <rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" sha1="ffa9c24c..."/>
-    <rom name="Manuals/" size="0" crc="00000000" sha1="da39a3ee5e6b4b0d3255bfef95601890afd80709"/>
-    <rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" sha1="8175e3c8..."/>
-</game>
-```
-
-**RomVault shows the same 3 sets as Grouped, with exactly the same folders** — the redundant entries are pruned as it loads (`DatClean.RemoveUnNeededDirectoriesFromZip`). Folder entries are not files and never report as missing.
-
-This is RomVault's own convention rather than an invention of this tool: RomVault writes these same entries itself when it flattens an archive.
-
-**Use it when:** a tool other than RomVault consumes your dats and wants every folder spelled out. For RomVault alone, Grouped gives the same outcome with a smaller dat.
-
-**Trade-off:** more entries in the dat, and folder markers show up in listings and counts. Some third-party dat validators flag them as odd — they are not.
-
----
-
 ### Choosing quickly
 
 | Your situation | Structure |
@@ -442,15 +399,14 @@ This is RomVault's own convention rather than an invention of this tool: RomVaul
 | You want the dat to mirror your folder tree | **Standard** |
 | Each top-level folder is one title you want reported as one set | **Grouped** |
 | Multi-disc / bundled-extras releases | **Grouped** |
-| A non-RomVault tool needs every folder listed explicitly | **Grouped + Folders** |
 
-All three describe the same files with the same hashes, and all three capture empty folders and zero-byte files. Switching structure changes how RomVault *groups and reports* them — never which files are tracked.
+Both describe the same files with the same hashes, and both capture empty folders and zero-byte files. Switching structure changes how RomVault *groups and reports* them — never which files are tracked.
 
 ---
 
-## Why there is no "Dirs" structure or "Legacy" format
+## Options that were removed
 
-Earlier versions offered a fourth structure ("Dirs") and a Modern/Legacy format switch. Both wrote `<rom>` entries inside `<dir>` tags, and **RomVault cannot read those at all.**
+Earlier versions offered a "Dirs" structure and a Modern/Legacy format switch. Both wrote `<rom>` entries inside `<dir>` tags, and **RomVault cannot read those at all.**
 
 RomVault's parser only ever looks for a fixed set of child elements:
 
@@ -463,6 +419,8 @@ RomVault's parser only ever looks for a fixed set of child elements:
 So a `<dir>` is a container of *sets*, and a `<game>` is a container of *files*. A subfolder inside a set has exactly one valid encoding — a `/` inside the rom's name — which RomVault expands back into a folder tree when it loads the dat. Anything outside that grammar is **silently discarded**: RomVault does not warn, it simply loads nothing, and then offers to relocate the files it cannot account for.
 
 Dats written with the old "Dirs" structure or the "Legacy" format therefore loaded into RomVault as completely empty. Both were removed rather than left as traps; if your saved settings used either, the app moves you to the nearest valid choice and says so in the activity log.
+
+A third structure, **Grouped + Folders**, was also removed. It behaved exactly like *Grouped* but additionally wrote an entry for folders that already contained files. RomVault discards those as it loads, because a folder holding files is already implied by the paths of the files inside it — so the two produced identical results. Empty folders, the thing it actually existed to preserve, are now recorded by both remaining structures.
 
 If you need a dat for ClrMamePro or another toolchain that wants that older shape, use a purpose-built converter — this tool targets RomVault.
 

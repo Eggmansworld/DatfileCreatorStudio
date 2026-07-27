@@ -165,44 +165,6 @@
                                Text="Trade-off: the folders holding your files stop being visible as structure until RomVault expands the rom paths — nothing is lost, but a set with hundreds of merged files reads as one long list."/>
                 </StackPanel>
 
-                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
-                <!-- Grouped + Folders -->
-                <StackPanel Spacing="6">
-                    <TextBlock Classes="h2" Text="Grouped + Folders                          (Mixed dats only)"/>
-                    <TextBlock Classes="lead"
-                               Text="Grouped, plus the folder layout recorded. Empty folders survive."/>
-                    <TextBlock Classes="body"
-                               Text="Identical to Grouped in how it groups sets. The difference is that it writes a folder entry for EVERY subfolder, not only the empty ones — original/, Box Scans/ and Manuals/ below all contain files. RomVault discards those extra entries as it loads, because a folder holding files is already implied by their paths, so in RomVault the result is identical to Grouped."/>
-                    <Border Classes="codebox">
-                        <SelectableTextBlock Classes="code" xml:space="preserve">&lt;rom name="readme.txt" size="6" crc="873586f3" sha1="f78a71af8..."/&gt;
-&lt;game name="Crime Wave (1990)"&gt;
-    &lt;rom name="Crime Wave (Disk A).ima" size="5" crc="3ddb8b7a" .../&gt;
-    &lt;rom name="Crime Wave (Disk B).ima" size="5" crc="a4d2dac0" .../&gt;
-    &lt;rom name="original/" size="0" crc="00000000" sha1="da39a3ee..."/&gt;
-    &lt;rom name="original/Crime Wave (v1.0).ima" size="3" crc="4fb9faee" .../&gt;
-    &lt;rom name="saves/" size="0" crc="00000000" sha1="da39a3ee..."/&gt;
-&lt;/game&gt;
-&lt;game name="Deluxe Paint IV"&gt;
-    &lt;rom name="DPaint4.adf" size="3" crc="be1437ad" .../&gt;
-&lt;/game&gt;
-&lt;game name="Documentation"&gt;
-    &lt;rom name="Box Scans/" size="0" crc="00000000" sha1="da39a3ee..."/&gt;
-    &lt;rom name="Box Scans/Crime Wave Box.png" size="4" crc="c4b3b3ae" .../&gt;
-    &lt;rom name="Manuals/" size="0" crc="00000000" sha1="da39a3ee..."/&gt;
-    &lt;rom name="Manuals/Crime Wave Manual.pdf" size="3" crc="69a297d8" .../&gt;
-&lt;/game&gt;</SelectableTextBlock>
-                    </Border>
-                    <TextBlock Classes="body"
-                               Text="RomVault shows the same 3 sets as Grouped, with exactly the same folders — the redundant entries are pruned on load. Folder entries are not files and never report as missing. This is RomVault's own convention rather than an invention of this tool: it writes these same entries itself when it flattens an archive."/>
-                    <TextBlock Classes="label"
-                               Text="Use it when: a tool other than RomVault consumes your dats and wants every folder spelled out. For RomVault alone, Grouped gives the same outcome with a smaller dat."/>
-                    <TextBlock Classes="body" Foreground="{DynamicResource AppSubtleTextBrush}"
-                               Text="Trade-off: more entries in the dat, and folder markers show up in listings and counts. Some third-party validators flag them as odd — they are not."/>
-                </StackPanel>
-
-                <Border Height="1" Background="{DynamicResource AppBorderBrush}"/>
-
                 <!-- Cheat sheet -->
                 <StackPanel Spacing="6">
                     <TextBlock Classes="h2" Text="Choosing quickly"/>
@@ -212,9 +174,7 @@ Standard ROM sets — No-Intro, Redump, TOSEC        →  Standard
 You want the dat to mirror your folder tree        →  Standard
 
 Each top-level folder is one title, reported once  →  Grouped
-Multi-disc / bundled-extras releases               →  Grouped
-
-A non-RomVault tool needs every folder listed       →  Grouped + Folders</SelectableTextBlock>
+Multi-disc / bundled-extras releases               →  Grouped</SelectableTextBlock>
                     </Border>
                 </StackPanel>
 

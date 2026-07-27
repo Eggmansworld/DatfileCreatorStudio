@@ -17,9 +17,8 @@ public sealed class DatData
 /// attribute order (name, size, crc, sha1, sha256, md5, blake3, date).
 ///
 /// Structure options ("opt" keys match the suite's internal names):
-///   opt2 — "Standard"           (the default; the only shape valid for Zipped)
-///   opt3 — "Grouped"            — Mixed only
-///   opt4 — "Grouped + Folders"  — Mixed only
+///   opt2 — "Standard"  (the default; the only shape valid for Zipped)
+///   opt3 — "Grouped"   — Mixed only
 ///
 /// Zipped dats only ever use opt2: there a game resolves to a physical archive,
 /// so pointing one at a folder of separate zips would describe a collection that
@@ -162,21 +161,19 @@ public static class DatWriter
 
     /// <summary>
     /// Recursively flatten a Mixed subtree into path-prefixed rom entries.
-    /// <paramref name="allFolders"/> also writes an entry for folders that do
-    /// hold content; without it only folders with nothing at all inside them
-    /// get one, since every other folder is implied by the paths of its files.
+    /// Only folders with nothing at all inside them get an entry of their own —
+    /// every other folder is already implied by the paths of its files, and
+    /// RomVault discards a redundant one anyway.
     /// </summary>
     private static void MMerge(TextWriter f, FolderNode node, DatData data, DatSettings s,
-                               string prefix, string indent, bool allFolders)
+                               string prefix, string indent)
     {
-        if (prefix.Length > 0
-            && (allFolders || (node.Items.Count == 0 && node.Subdirs.Count == 0)))
+        if (prefix.Length > 0 && node.Items.Count == 0 && node.Subdirs.Count == 0)
             MDirEntry(f, prefix, s, indent);
         foreach (string item in node.Items)
             MRom(f, item, prefix, data, s, indent);
         foreach (var sub in node.Subdirs)
-            MMerge(f, sub, data, s, prefix.Length > 0 ? prefix + "/" + sub.Name : sub.Name,
-                   indent, allFolders);
+            MMerge(f, sub, data, s, prefix.Length > 0 ? prefix + "/" + sub.Name : sub.Name, indent);
     }
 
     // ── Zipped atom helpers ──────────────────────────────────────────────
@@ -217,7 +214,7 @@ public static class DatWriter
             foreach (string item in node.Items)
                 MRom(f, item, "", data, s, ti);
             foreach (var sub in node.Subdirs)
-                MMerge(f, sub, data, s, sub.Name, ti, allFolders: false);
+                MMerge(f, sub, data, s, sub.Name, ti);
             f.Write($"{t}</{tag}>\n");
         }
         else
@@ -281,31 +278,7 @@ public static class DatWriter
             foreach (string item in sub.Items)
                 MRom(f, item, "", data, s, ti);
             foreach (var ssub in sub.Subdirs)
-                MMerge(f, ssub, data, s, ssub.Name, ti, allFolders: false);
-            f.Write($"{t}</{tag}>\n");
-        }
-    }
-
-    // ── opt4 — "Grouped + Folders" ───────────────────────────────────────
-
-    private static void WriteMixedOpt4(TextWriter f, FolderNode node, DatData data,
-                                       DatSettings s, int depth = 1)
-    {
-        string t = Tabs(depth);
-        string ti = Tabs(depth + 1);
-        // Loose files at the dat root stay as bare <rom> entries (see WriteMixedOpt2).
-        foreach (string item in node.Items)
-            MRom(f, item, "", data, s, t);
-        foreach (var sub in node.Subdirs)
-        {
-            // First-level: always game
-            string tag = WriteGameOpen(f, sub.Name, s, depth);
-            foreach (string item in sub.Items)
-                MRom(f, item, "", data, s, ti);
-            // All subdirs merged, each recorded by its own folder entry — at
-            // every depth, not just the first level.
-            foreach (var ssub in sub.Subdirs)
-                MMerge(f, ssub, data, s, ssub.Name, ti, allFolders: true);
+                MMerge(f, ssub, data, s, ssub.Name, ti);
             f.Write($"{t}</{tag}>\n");
         }
     }
@@ -317,7 +290,7 @@ public static class DatWriter
         bool mixed = s.DatType == "mixed";
         // Retired values (notably the old "opt1" Dirs structure) fall back to
         // the default rather than writing a dat RomVault cannot read.
-        string structure = s.Structure is "opt2" or "opt3" or "opt4" ? s.Structure : "opt2";
+        string structure = s.Structure is "opt2" or "opt3" ? s.Structure : "opt2";
 
         if (!mixed)
         {
@@ -337,7 +310,6 @@ public static class DatWriter
         switch (structure)
         {
             case "opt3": WriteMixedOpt3(f, node, data, s); break;
-            case "opt4": WriteMixedOpt4(f, node, data, s); break;
             default: WriteMixedOpt2(f, node, data, s); break;
         }
     }

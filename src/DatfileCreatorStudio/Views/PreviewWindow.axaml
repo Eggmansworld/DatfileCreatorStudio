@@ -42,9 +42,6 @@
                 <RadioButton Classes="opt" GroupName="pvStruct" Content="Grouped"
                              IsChecked="{Binding StructOpt3}"
                              IsEnabled="{Binding AreFolderStructuresAvailable}"/>
-                <RadioButton Classes="opt" GroupName="pvStruct" Content="Grouped + Folders"
-                             IsChecked="{Binding StructOpt4}"
-                             IsEnabled="{Binding AreFolderStructuresAvailable}"/>
                 <TextBlock Classes="subtle" FontSize="11" VerticalAlignment="Center"
                            IsVisible="{Binding !AreFolderStructuresAvailable}"
                            Text="(Zipped dats always use Standard)"/>

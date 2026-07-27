@@ -45,11 +45,8 @@ public partial class MainWindowViewModel : ViewModelBase
         _genPerAll = d.GenMode == "per_all";
         if (!_genPerTop && !_genPerRoot && !_genPerAll)
             _genPerRoot = true;
-        _structOpt2 = d.Structure == "opt2";
         _structOpt3 = d.Structure == "opt3";
-        _structOpt4 = d.Structure == "opt4";
-        if (!_structOpt2 && !_structOpt3 && !_structOpt4)
-            _structOpt2 = true;
+        _structOpt2 = !_structOpt3;
         _useMachine = d.UseMachine;
         _inclGameDesc = d.InclGameDesc;
         _forcePacking = d.ForcePacking;
@@ -114,10 +111,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool IsZipped => DatTypeZipped;
 
     /// <summary>
-    /// The two "first level dirs as games" structures only make sense for Mixed
-    /// dats. In a Zipped dat a game resolves to a physical archive, so naming a
-    /// folder of separate zips as one game would describe an archive that does
-    /// not exist — RomVault would offer to repack the collection into it.
+    /// "Grouped" only makes sense for Mixed dats. In a Zipped dat a game
+    /// resolves to a physical archive, so naming a folder of separate zips as
+    /// one game would describe an archive that does not exist — RomVault would
+    /// offer to repack the collection into it.
     /// </summary>
     public bool AreFolderStructuresAvailable => DatTypeMixed;
 
@@ -125,10 +122,9 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         // Zipped has exactly one valid structure; don't leave an impossible
         // choice selected behind a disabled radio button.
-        if (value && (StructOpt3 || StructOpt4))
+        if (value && StructOpt3)
         {
             StructOpt3 = false;
-            StructOpt4 = false;
             StructOpt2 = true;
             Drawer.ReportInfo(
                 "Switched to the Standard structure — it is the only one valid for Zipped dats, "
@@ -148,11 +144,10 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Structure applies to the two recursive modes; per_all dats are flat by definition.</summary>
     public bool IsStructureEnabled => !GenPerAll;
 
-    // ── Structure (README numbering: 1=opt2, 2=opt3, 3=opt4) ─────────────
+    // ── Structure: opt2 = "Standard", opt3 = "Grouped" ──────────────────
 
     [ObservableProperty] private bool _structOpt2;
     [ObservableProperty] private bool _structOpt3;
-    [ObservableProperty] private bool _structOpt4;
 
     [ObservableProperty] private bool _useMachine;
     [ObservableProperty] private bool _inclGameDesc;
@@ -333,7 +328,7 @@ public partial class MainWindowViewModel : ViewModelBase
         d.Comment = Comment;
         d.DatType = DatTypeMixed ? "mixed" : "zipped";
         d.GenMode = GenPerTop ? "per_top" : GenPerAll ? "per_all" : "per_root";
-        d.Structure = StructOpt3 ? "opt3" : StructOpt4 ? "opt4" : "opt2";
+        d.Structure = StructOpt3 ? "opt3" : "opt2";
         d.UseMachine = UseMachine;
         d.InclGameDesc = InclGameDesc;
         d.ForcePacking = ForcePacking;

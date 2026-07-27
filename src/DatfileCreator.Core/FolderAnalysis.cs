@@ -283,10 +283,10 @@ public static partial class FolderAnalysis
         }
         else if (maxD >= 3 && nested > n / 2)
         {
-            rec.Structure = "opt4";
+            rec.Structure = "opt3";
             detail.Add("Deep structure detected (max depth " + maxD + "). "
                 + nested + " folder(s) have both direct " + cw + " AND nested subdirectories. "
-                + "the 'Grouped + Folders' structure captures this most cleanly.");
+                + "the 'Grouped' structure captures this most cleanly.");
         }
         else if (maxD >= 3 && containers > 0)
         {
@@ -318,7 +318,7 @@ public static partial class FolderAnalysis
 
         if (maxD >= 5)
             f.Notes.Add("Very deep nesting detected (max " + maxD + " levels). "
-                + "'Grouped + Folders' is recommended. If your top-level subfolders each represent "
+                + "'Grouped' is recommended. If your top-level subfolders each represent "
                 + "independent sub-collections rather than a single game or title, consider "
                 + "switching Generation to '1 dat per root folder & all subfolders "
                 + "(TOSEC style)' so each "
@@ -330,7 +330,6 @@ public static partial class FolderAnalysis
         {
             ["opt2"] = "Standard",
             ["opt3"] = "Grouped",
-            ["opt4"] = "Grouped + Folders",
         };
         string modeLabel = rec.GenMode switch
         {

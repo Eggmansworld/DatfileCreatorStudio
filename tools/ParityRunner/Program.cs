@@ -281,7 +281,7 @@ if (previewDir is not null && previews is not null)
     Directory.CreateDirectory(previewDir);
     foreach (var entry in previews)
     {
-        foreach (string opt in (string[])["opt2", "opt3", "opt4"])
+        foreach (string opt in (string[])["opt2", "opt3"])
         {
             string xml = PreviewRenderer.Render(entry, opt);
             string name = $"{XmlText.SafeFilename(entry.DatName)}__{opt}.xml";

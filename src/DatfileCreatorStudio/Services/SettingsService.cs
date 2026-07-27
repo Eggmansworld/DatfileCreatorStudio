@@ -116,6 +116,13 @@ public sealed class SettingsService
                 "The 'Dirs' structure has been retired — RomVault reads no roms at all from dats "
                 + "written that way. Switched to the Standard structure.");
         }
+        else if (Config.Dat.Structure == "opt4")
+        {
+            Config.Dat.Structure = "opt3";
+            MigrationNotes.Add(
+                "'Grouped + Folders' has been retired — RomVault discarded its extra folder entries, "
+                + "so it produced the same result as Grouped. Switched to Grouped.");
+        }
 
         try
         {

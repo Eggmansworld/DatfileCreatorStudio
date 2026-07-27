@@ -57,7 +57,7 @@
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Structure Guide..." Click="OnOpenStructureGuide"
-                          ToolTip.Tip="What each structure does to your collection, with a worked example of the same folder written three ways"/>
+                          ToolTip.Tip="What each structure does to your collection, with a worked example of the same folder written both ways"/>
                 <Separator/>
                 <MenuItem Header="View on GitHub" Click="OnOpenGitHub"
                           ToolTip.Tip="Open the project page in your browser"/>
@@ -103,7 +103,7 @@
                 </Button>
                 <Button Grid.Column="3" HorizontalAlignment="Left" Click="OnPreviewClick"
                         IsEnabled="{Binding HasPreview}" Margin="10,0,0,0" Padding="16,10"
-                        ToolTip.Tip="Preview every dat produced by the last run and compare all four structure options instantly — re-rendered from in-memory data, no re-hashing">
+                        ToolTip.Tip="Preview every dat produced by the last run and compare both structure options instantly — re-rendered from in-memory data, no re-hashing">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <PathIcon Data="{x:Static root:Icons.Magnify}" Width="13" Height="13"/>
                         <TextBlock Text="Preview Dats"/>
@@ -246,11 +246,7 @@
                                 <RadioButton Classes="opt" GroupName="structure" Content="Grouped"
                                              IsChecked="{Binding StructOpt3}"
                                              IsEnabled="{Binding AreFolderStructuresAvailable}"
-                                             ToolTip.Tip="Mixed dats only. Each first-level folder becomes one game entry and everything inside it is gathered in, with folder paths kept in the rom names. Useful when one folder holds every disc or variant of a single title."/>
-                                <RadioButton Classes="opt" GroupName="structure" Content="Grouped + Folders"
-                                             IsChecked="{Binding StructOpt4}"
-                                             IsEnabled="{Binding AreFolderStructuresAvailable}"
-                                             ToolTip.Tip="Mixed dats only. Grouped, and the folder layout inside each game is recorded too — so empty folders survive in the dat."/>
+                                             ToolTip.Tip="Mixed dats only. Each first-level folder becomes one game entry and everything inside it is gathered in, with folder paths kept in the rom names. Useful when one folder holds every disc or variant of a single title. Empty folders are recorded either way."/>
                                 <TextBlock Classes="subtle" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
                                            IsVisible="{Binding IsZipped}"
                                            Text="Zipped dats always use Standard — each archive is its own game entry."/>
