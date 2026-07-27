@@ -67,10 +67,20 @@ public partial class LogDrawerViewModel : ViewModelBase
             if (CurrentFile != _currentFilePending)
                 CurrentFile = _currentFilePending;
             if (_stopwatch.IsRunning)
-                Elapsed = _stopwatch.Elapsed.ToString(@"hh\:mm\:ss");
+                Elapsed = FormatElapsed(_stopwatch.Elapsed);
         };
         _timer.Start();
     }
+
+    /// <summary>
+    /// hh:mm:ss, gaining a day field (dd:hh:mm:ss) past 24 hours — the "hh"
+    /// custom format alone is the hour COMPONENT (0–23), so a 24-hour-plus
+    /// hashing run used to wrap back to 00:00:00.
+    /// </summary>
+    private static string FormatElapsed(TimeSpan ts) =>
+        ts.Days > 0
+            ? $"{ts.Days:00}:{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}"
+            : $"{ts.Hours:00}:{ts.Minutes:00}:{ts.Seconds:00}";
 
     [ObservableProperty]
     private bool _isExpanded;
@@ -185,7 +195,7 @@ public partial class LogDrawerViewModel : ViewModelBase
     public void OnRunCompleted(bool ok, int errorCount, bool stopped)
     {
         _stopwatch.Stop();
-        Elapsed = _stopwatch.Elapsed.ToString(@"hh\:mm\:ss");
+        Elapsed = FormatElapsed(_stopwatch.Elapsed);
         IsRunning = false;
         IsIndeterminate = false;
         _currentFilePending = "";
